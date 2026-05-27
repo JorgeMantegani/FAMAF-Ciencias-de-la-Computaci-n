@@ -1,0 +1,1 @@
+c:\Users\mante\.vscode\extensions\ms-vscode-remote.remote-wsl-0.104.3

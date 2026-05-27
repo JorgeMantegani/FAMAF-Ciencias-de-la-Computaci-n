@@ -1,0 +1,6 @@
+# Dependencias para grade.py, pytest y test_metrics.py.
+# connection.py / server.py / client.py solo usan la biblioteca estándar.
+pytest>=7.0
+coverage>=7.0
+radon>=6.0
+ruff>=0.1.0

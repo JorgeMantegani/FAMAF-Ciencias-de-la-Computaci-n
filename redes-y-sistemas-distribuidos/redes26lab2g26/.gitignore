@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+eggs/
+*.egg-info/
+.eggs/
+*.egg
+
+# Entorno virtual
+venv/
+.venv/
+env/
+.env
+.env.*
+
+# Tests y datos de prueba
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+testdata/
+
+# Archivos temporales
+*.tmp
+*.temp
+
+# Credenciales (no subir a git)
+*.env
+*_credentials.env
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+*.log
+
+# Enunciado
+Lab2_enunciado.pdf

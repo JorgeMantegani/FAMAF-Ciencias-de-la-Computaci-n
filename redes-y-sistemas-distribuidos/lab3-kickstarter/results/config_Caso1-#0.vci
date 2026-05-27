@@ -1,0 +1,35 @@
+file 869 1778528641                                             
+version 3
+run config_Caso1-0-20260511-19:43:02-43196
+attr configname config_Caso1
+attr datetime 20260511-19:43:02
+attr datetimef 20260511-194302
+attr experiment config_Caso1
+attr inifile omnetpp.ini
+attr iterationvars ""
+attr iterationvarsd ""
+attr iterationvarsf ""
+attr measurement ""
+attr network Network
+attr processid 43196
+attr repetition 0
+attr replication #0
+attr resultdir results
+attr runnumber 0
+attr seedset 0
+config description "Control de Flujo"
+config *txToQueueDatarate 1Mbps
+config *queueToRxDatarate 1Mbps
+config *.nodeRx.rxToSinkDatarate 0.5Mbps
+config *.linkDelay 100us
+config network Network
+config sim-time-limit 200s
+config Network.gen.generationInterval exponential(0.001)
+config Network.queue.serviceTime exponential(0.001)
+
+vector 0 Network.nodeRx.sink Delay ETV
+0	789 19 8 8 10.0002 10.0002 1 0.0002 0.0002 0.0002 4e-08
+0	808 20 19 19 20.0002 20.0002 1 0.0002 0.0002 0.0002 4e-08
+0	828 20 30 30 30.0002 30.0002 1 0.0002 0.0002 0.0002 4e-08
+0	848 20 41 41 40.0002 40.0002 1 0.0002 0.0002 0.0002 4e-08
+

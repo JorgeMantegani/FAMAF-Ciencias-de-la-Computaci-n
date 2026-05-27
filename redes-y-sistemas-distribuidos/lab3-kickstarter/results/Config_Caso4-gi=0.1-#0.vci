@@ -1,0 +1,37 @@
+file 1089 1778537719                                            
+version 3
+run Config_Caso4-0-20260511-22:14:55-1047
+attr configname Config_Caso4
+attr datetime 20260511-22:14:55
+attr datetimef 20260511-221455
+attr experiment Config_Caso4
+attr inifile omnetpp.ini
+attr iterationvars $gi=0.1
+attr iterationvarsd gi=0.1
+attr iterationvarsf gi=0.1-
+attr measurement $gi=0.1
+attr network Network
+attr processid 1047
+attr repetition 0
+attr replication #0
+attr resultdir results
+attr runnumber 0
+attr seedset 0
+itervar gi 0.1
+config description "Cuello de botella en la red"
+config Network.txToQueueDatarate 1Mbps
+config Network.queueToRxDatarate 0.5Mbps
+config Network.nodeRx.rxToSinkDatarate 1Mbps
+config network Network
+config sim-time-limit 200s
+config Network.nodeTx.gen.packetByteSize 12500
+config *.nodeTx.gen.generationInterval exponential(0.1)
+config Network.gen.generationInterval exponential(0.001)
+config Network.queue.serviceTime exponential(0.001)
+config Network.nodeTx.txBuffer.bufferSize 2000000
+config Network.queue.bufferSize 200
+config Network.nodeRx.rxBuffer.bufferSize 200
+
+vector 0 Network.nodeRx.sink Delay ETV
+0	1062 26 8 8 0.079787450457 0.079787450457 1 0.0002 0.0002 0.0002 4e-08
+
