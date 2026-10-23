@@ -1,0 +1,39 @@
+# Entorno virtual
+.venv/
+.venv-old/
+venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.Python
+
+# Variables de entorno (contiene secretos)
+.env
+
+# Base de datos local
+*.db
+*.sqlite3
+
+# Tests y cobertura
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+.ruff_cache/
+borrar_prueba.py
+crear_usuario.py
+
+# Editores
+.vscode/
+.idea/
+*.swp
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+#carpeta interna del grupo
+docus_personal/

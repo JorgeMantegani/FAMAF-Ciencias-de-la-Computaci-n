@@ -1,0 +1,49 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@500;600;700&display=swap');
+
+/* Design tokens from the FutBot screens design. */
+:root {
+  --fb-font-body: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
+  --fb-font-heading: 'IBM Plex Sans', system-ui, sans-serif;
+
+  --fb-pitch: #76895a;
+  --fb-pitch-stripe-a: #7a8f5c;
+  --fb-pitch-stripe-b: #71865a;
+  --fb-surface-dark: #1c3710;
+  --fb-panel: #203a1c;
+  --fb-panel-border: #3e5c36;
+  --fb-input: #152a12;
+
+  --fb-text: #f3f1e8;
+  --fb-text-strong: #f7f5ee;
+  --fb-text-muted: #bac6a8;
+
+  --fb-accent: #e0a35f;
+  --fb-accent-hover: #eab274;
+  --fb-accent-ink: #231405;
+  --fb-light: #f3f1e8;
+  --fb-light-ink: #1c2a14;
+
+  --fb-ghost-border: #6f8e5f;
+  --fb-ghost-hover: #2b4a26;
+  --fb-disabled-bg: #34502e;
+  --fb-disabled-text: #9fb08e;
+
+  --fb-chip-bg: #2e4c28;
+  --fb-chip-text: #dfe8d2;
+  --fb-chip-border: #4a6a40;
+  --fb-chip-ok-bg: #1d4a2c;
+  --fb-chip-ok-text: #aee6bd;
+  --fb-chip-ok-border: #3c7a52;
+  --fb-chip-warning-bg: #4a3218;
+  --fb-chip-warning-text: #f6cb97;
+  --fb-chip-warning-border: #7a5227;
+
+  --fb-danger-bg: #3d2a1c;
+  --fb-danger-text: #ffcfc0;
+  --fb-danger-border: #b8664e;
+
+  --fb-radius-sm: 5px;
+  --fb-radius-md: 8px;
+  --fb-radius-lg: 12px;
+  --fb-radius-xl: 16px;
+}

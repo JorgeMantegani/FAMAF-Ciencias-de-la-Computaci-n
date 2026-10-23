@@ -1,0 +1,67 @@
+.match-page { min-height: 100vh; color: #f3ecdd; background: linear-gradient(#0b2a1633, #0b2a1680), url('/BackFutBot.png') center / cover fixed; font-family: 'IBM Plex Sans', sans-serif; }
+.match-header { min-height: 72px; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; gap: 16px; background: #0b2a16; border-bottom: 1px solid #8a6a4a; }
+.match-brand { display: flex; align-items: center; gap: 12px; color: inherit; text-decoration: none; }
+.match-brand-mark { width: 36px; height: 36px; border-radius: 8px; background: #d49a53; display: grid; place-items: center; font-size: 22px; }
+.match-brand-name { display: block; font-size: 18px; }
+.match-brand-project { display: block; max-width: min(55vw, 480px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 10px 'IBM Plex Mono', monospace; color: #f3f3f3; }
+.match-connection { display: flex; align-items: center; gap: 8px; font: 10px 'IBM Plex Mono', monospace; }
+.match-connection i { width: 7px; height: 7px; border-radius: 50%; background: #82a66f; }
+.match-arena { width: 100%; max-width: 1440px; margin: auto; padding: 20px 5% 32px; display: flex; flex-direction: column; gap: 14px; }
+.match-scoreboard { min-height: 52px; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 10px 18px; background: #0b2a16e8; border: 1px solid #fff3; border-radius: 12px; }
+.match-score { display: flex; align-items: center; gap: 16px; min-width: 0; }
+.match-score h2 { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
+.match-team-color { width: 12px; height: 12px; flex: 0 0 12px; border: 2px solid; }
+.match-team-color--home { background: #f09b38; border-color: #9a5410; }
+.match-team-color--away { background: #2f72e2; border-color: #17458f; }
+.match-score strong { display: flex; gap: 10px; align-items: center; white-space: nowrap; font: 700 24px 'IBM Plex Mono', monospace; color: #fff; }
+.match-score strong span { font-size: 14px; font-weight: 400; color: #fffc; }
+.match-clock { display: flex; gap: 10px; align-items: center; flex-shrink: 0; font: 600 16px 'IBM Plex Mono', monospace; }
+.match-status { display: flex; gap: 8px; align-items: center; font: 10px 'IBM Plex Mono', monospace; }
+.match-status::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: #82a66f; }
+.match-status--paused::before { background: #d49a53; }
+.match-status--finished::before { background: #b5c2b3; }
+.match-pitch { display: block; width: 100%; height: auto; aspect-ratio: 1296 / 622; background: #245a3a; border: 2px solid #f3ecdd66; box-shadow: 0 16px 32px #06160d70; border-radius: 18px; overflow: hidden; }
+.match-pitch-stripes { fill: #2b6542; opacity: .7; }
+.match-pitch-lines { fill: none; stroke: #f3ecdd; stroke-width: 3; }
+.match-pitch-goal { fill: #132d20; }
+.match-pitch-center { fill: #f3ecdd; stroke: none; }
+.match-pitch-player { filter: drop-shadow(0 4px 4px #06160d80); }
+.match-pitch-player circle { stroke-width: 4; }
+.match-pitch-player--home circle { fill: #f09b38; stroke: #9a5410; }
+.match-pitch-player--away circle { fill: #2f72e2; stroke: #17458f; }
+.match-pitch-player text { fill: white; font: 700 14px 'IBM Plex Mono', monospace; }
+.match-pitch-player .match-possession-ring { fill: none; stroke: #f3ecdd; stroke-width: 2; stroke-dasharray: 4 4; }
+.match-pitch-ball { filter: drop-shadow(0 2px 3px #06160d80); }
+.match-pitch-ball circle { fill: #fff; stroke: #18372d; stroke-width: 2; }
+.match-pitch-ball path { fill: #18372d; }
+.match-pitch-footer { display: flex; justify-content: space-between; gap: 16px; font: 11px 'IBM Plex Mono', monospace; }
+.match-pitch-footer a { text-decoration: underline; text-underline-offset: 4px; }
+.match-details { background: #0b2a16e8; border: 1px solid #fff3; border-radius: 12px; padding: 16px; }
+.match-details summary { cursor: pointer; font-size: 14px; }
+.match-teams { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.match-panel { min-width: 0; padding: 20px; background: #ffffff05; border: 1px solid #fff3; border-radius: 10px; margin-top: 16px; }
+.match-panel h2 { margin-bottom: 12px; font-size: 18px; font-weight: 600; }
+.match-players li { display: grid; gap: 4px; padding: 12px 0; border-top: 1px solid #fff2; overflow-wrap: anywhere; }
+.match-players small { color: #b5c2b3; }
+.match-actions li { padding: 8px 0; }
+.match-warning { background: #fff0dc; color: #713e0b; padding: 16px; border-radius: 8px; }
+.match-page :focus-visible { outline: 2px solid #f09b38; outline-offset: 5px; }
+.match-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media (min-width: 1440px) { .match-arena { padding-left: 72px; padding-right: 72px; } }
+@media (max-width: 800px) {
+  .match-scoreboard { flex-wrap: wrap; gap: 12px; }
+  .match-score { flex: 1 0 100%; justify-content: center; }
+  .match-clock { font-size: 14px; }
+}
+@media (max-width: 480px) {
+  .match-header { padding: 14px 16px; }
+  .match-brand-project { font-size: 8px; }
+  .match-connection { max-width: 90px; font-size: 9px; }
+  .match-arena { padding: 16px 12px; }
+  .match-scoreboard { padding: 10px; }
+  .match-score { gap: 10px; }
+  .match-score h2 { font-size: 12px; gap: 5px; }
+  .match-teams { grid-template-columns: 1fr; gap: 0; }
+  .match-pitch { border-radius: 10px; }
+  .match-panel { padding: 12px; }
+}

@@ -1,0 +1,20 @@
+@import url('https://fonts.googleapis.com/css2?family=Huninn&family=IBM+Plex+Mono:wght@400;600;700&family=IBM+Plex+Sans:wght@400;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-plex-sans: 'IBM Plex Sans', sans-serif;
+  --font-plex-mono: 'IBM Plex Mono', monospace;
+}
+
+:root {
+  font-family: system-ui, sans-serif;
+  color: #18372d;
+  background: #f0f5f2;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+* { box-sizing: border-box; }
+body { margin: 0; }
+#root { min-height: 100vh; }
+button, input { font: inherit; }

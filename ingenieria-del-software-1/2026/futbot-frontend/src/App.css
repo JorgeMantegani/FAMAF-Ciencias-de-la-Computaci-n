@@ -1,0 +1,201 @@
+.auth-layout {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.card {
+  width: 100%;
+  max-width: 440px;
+  padding: 32px;
+  background: white;
+  border: 1px solid #d3e1d9;
+  border-radius: 16px;
+  box-shadow: 0 12px 36px #18372d0d;
+}
+
+.card .brand {
+  margin: 0 0 24px;
+  font-size: 24px;
+  font-weight: 800;
+  color: #17633f;
+}
+
+.card h1 {
+  margin: 0 0 12px;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.card .intro {
+  margin: 0 0 28px;
+  color: #50655b;
+  line-height: 1.5;
+}
+
+.card form {
+  display: flex;
+  flex-direction: column;
+}
+
+.card label {
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.card input {
+  width: 100%;
+  min-height: 46px;
+  padding: 10px 12px;
+  margin-bottom: 20px;
+  border: 1px solid #809b8d;
+  border-radius: 6px;
+}
+
+.card button {
+  width: 100%;
+  min-height: 46px;
+  padding: 12px;
+  border: 0;
+  border-radius: 6px;
+  background: #17633f;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.card button:hover:not(:disabled) {
+  background: #104b2e;
+}
+
+.card button:disabled {
+  opacity: .65;
+  cursor: wait;
+}
+
+.card input:focus-visible,
+.card button:focus-visible {
+  outline: 3px solid #42a877;
+  outline-offset: 3px;
+}
+
+.card .message {
+  margin: 0 0 20px;
+  padding: 12px;
+  border-radius: 6px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.card .error {
+  color: #8f1d1d;
+  background: #fff0f0;
+}
+
+.card .success {
+  color: #14532d;
+  background: #eaf8ee;
+}
+
+.registration-layout {
+  min-height: 100vh;
+  width: 100%;
+}
+
+#top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 24px;
+  width: 100%;
+  min-height: 72px;
+  background: #0b2a16;
+  border-bottom: 1px solid #7e522a;
+}
+
+.label-futbot {
+  display: block;
+  color: var(--color-green-300);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  line-height: 1rem;
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+}
+
+.input-container {
+  background: #0f2217;
+  border: 1px solid var(--color-green-800);
+  border-radius: 0.375rem;
+  padding: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  transition: border-color 150ms;
+}
+
+.input-container:focus-within {
+  border-color: #f0a95b;
+}
+
+.input-field {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: white;
+  width: 100%;
+  min-width: 0;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-family: var(--font-mono);
+}
+
+.input-field::placeholder {
+  color: color-mix(in srgb, var(--color-green-800) 60%, transparent);
+}
+
+.auth-switch {
+  margin-top: 24px;
+  text-align: center;
+  line-height: 1.5;
+}
+
+.auth-switch a {
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.card .auth-switch a {
+  color: #17633f;
+}
+
+.registration-layout .auth-switch a {
+  color: #f0a95b;
+}
+
+.auth-switch a:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 4px;
+}
+
+.behavior-modal {
+  max-width: 800px;
+}
+
+.behavior-code {
+  max-height: 60vh;
+  overflow: auto;
+  margin: 0 0 24px;
+  padding: 16px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: #0b2a16;
+  border: 1px solid #2a5235;
+  border-radius: 8px;
+  color: #f3ecdd;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 13px;
+  line-height: 1.5;
+}

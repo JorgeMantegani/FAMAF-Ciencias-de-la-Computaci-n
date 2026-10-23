@@ -1,0 +1,110 @@
+.fb-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 16px;
+  box-sizing: border-box;
+  border: 0;
+  border-radius: var(--fb-radius-sm);
+  font: 500 12px/1 var(--fb-font-body);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.fb-button__content {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fb-button--primary {
+  background: var(--fb-accent);
+  color: var(--fb-accent-ink);
+}
+
+.fb-button--primary:hover:not(:disabled) {
+  background: var(--fb-accent-hover);
+}
+
+.fb-button--ghost {
+  background: transparent;
+  color: var(--fb-text);
+  border: 1px solid var(--fb-ghost-border);
+}
+
+.fb-button--ghost:hover:not(:disabled) {
+  background: var(--fb-ghost-hover);
+}
+
+.fb-button:disabled {
+  background: var(--fb-disabled-bg);
+  color: var(--fb-disabled-text);
+  border-color: transparent;
+  cursor: not-allowed;
+}
+
+.fb-button:focus-visible {
+  outline: 2px solid var(--fb-accent-hover);
+  outline-offset: 2px;
+}
+
+.fb-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 9px;
+  box-sizing: border-box;
+  border: 1px solid var(--fb-chip-border);
+  border-radius: 999px;
+  background: var(--fb-chip-bg);
+  color: var(--fb-chip-text);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.fb-chip--ok {
+  background: var(--fb-chip-ok-bg);
+  color: var(--fb-chip-ok-text);
+  border-color: var(--fb-chip-ok-border);
+}
+
+.fb-chip--warning {
+  background: var(--fb-chip-warning-bg);
+  color: var(--fb-chip-warning-text);
+  border-color: var(--fb-chip-warning-border);
+}
+
+.fb-panel {
+  box-sizing: border-box;
+  background: var(--fb-panel);
+  border: 1px solid var(--fb-panel-border);
+  border-radius: var(--fb-radius-lg);
+}
+
+.fb-spinner {
+  width: 14px;
+  height: 14px;
+  box-sizing: border-box;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: fb-spin 0.8s linear infinite;
+}
+
+@keyframes fb-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fb-spinner {
+    animation-duration: 2.4s;
+  }
+}

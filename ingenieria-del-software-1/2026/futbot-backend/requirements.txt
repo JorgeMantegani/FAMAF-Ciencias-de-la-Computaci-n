@@ -1,0 +1,26 @@
+# --- Framework y servidor ---
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+
+# --- Validación y configuración ---
+pydantic==2.9.2
+pydantic-settings==2.5.2
+email-validator 
+
+# --- Base de datos ---
+SQLAlchemy==2.0.35
+
+# --- Autenticación ---
+passlib[bcrypt]==1.7.4
+# bcrypt se fija en 4.0.1: las versiones 4.1+ rompen la detección de versión de passlib
+bcrypt==4.0.1
+python-jose[cryptography]==3.3.0
+
+# --- Tests ---
+pytest==8.3.3
+pytest-asyncio==0.24.0
+pytest-cov==5.0.0
+httpx==0.27.2
+
+# --- Calidad de código ---
+ruff==0.16.10

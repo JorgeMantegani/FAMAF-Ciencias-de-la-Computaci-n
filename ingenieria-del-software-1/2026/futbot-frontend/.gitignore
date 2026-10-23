@@ -1,0 +1,41 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Variables de entorno (propias de cada maquina)
+.env
+.env.local
+.env.*.local
+
+# Cobertura (Vitest, Playwright y el total combinado)
+coverage/
+coverage-e2e/
+coverage-total/
+
+# Playwright
+playwright-report/
+test-results/
+
+# React Component Preview
+previewConfig.json

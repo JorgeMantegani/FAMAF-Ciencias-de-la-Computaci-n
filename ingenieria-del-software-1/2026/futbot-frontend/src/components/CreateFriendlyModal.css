@@ -1,0 +1,88 @@
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: #173b22;
+  border: 1px solid #8a6a4a;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 700px;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 24px;
+  color: #f3ecdd;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: center;
+  border-bottom: 1px solid #2a5235;
+  padding-bottom: 12px;
+  margin-bottom: 20px;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 28px;
+  color: #f3ecdd;
+  cursor: pointer;
+}
+
+.modal-actions {
+  display: flex;
+  align-items: flex-end;
+  justify-content: end;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.home-action.secondary {
+  background: #3d6e48;
+  color: #ffffff;
+}
+
+.modal-alert-danger {
+  background: #4b2020;
+  color: #ffdddd;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.modal-success-box {
+  text-align: center;
+  padding: 20px 0;
+}
+
+.room-info {
+  background: #0b2a16;
+  padding: 16px;
+  border-radius: 8px;
+  margin: 16px 0;
+}
+
+.room-code {
+  font-size: 24px;
+  color: #bf9548;
+}
+
+.status-badge {
+  display: inline-block;
+  background: #bf9548;
+  color: #0b2a16;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-weight: bold;
+  margin-bottom: 20px;
+}

@@ -1,0 +1,7 @@
+target-version = "py311"
+line-length = 100
+extend-exclude = [".venv"]
+
+[lint]
+# Pinned so results don't drift with Ruff's defaults between versions.
+select = ["E", "F", "W", "I"]
