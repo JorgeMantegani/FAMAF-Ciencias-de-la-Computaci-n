@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic.alias_generators import to_camel
+from sqlalchemy import null
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_current_club, get_current_user
@@ -16,10 +17,11 @@ from app.schemas.friendly_room import (
     FriendlyRoomStartRead,
     JoinFriendlyRoomRequest,
     JoinFriendlyRoomResponse,
+    PublicFriendlyRoomResponse
 )
 from app.services.friendly_rooms import get_friendly_room, start_friendly_match
 from app.services.friendly_service import FriendlyService
-from app.ws.manager import room_manager as manager
+from app.ws.manager import room_manager
 
 router = APIRouter(
     prefix="/api/friendly/rooms",
@@ -47,6 +49,17 @@ async def create_friendly_room(
     service = FriendlyService(db)
     return service.create_room(club_id=str(current_user.club.id), request=payload)
 
+@router.get(
+    "/public",
+    response_model=list[PublicFriendlyRoomResponse],
+    status_code=status.HTTP_200_OK,
+    summary="Listar amistosos publicos en espera"
+)
+def list_public_friendly_rooms(
+    current_club: Club = Depends(get_current_club),
+    db: Session = Depends(get_db)
+):
+    return FriendlyService(db).list_public_rooms(club_id=str(current_club.id))
 
 @router.get("/{room_id}", response_model=FriendlyRoomRead)
 def read_friendly_room(
@@ -91,9 +104,12 @@ async def join_friendly_room(
         )
     service = FriendlyService(db)
     result = service.join_room(club_id=current_user.club.id, room_id=room_id, request=payload)
-    await manager.broadcast(result.room_id, {
-        "type": "guest_joined",
-        "awayClub": result.away_club,
-        "status": result.status,
+ 
+    club = current_user.club
+    room = get_friendly_room(db, room_id, club)
+    await room_manager.broadcast(result.room_id, {
+        "type": "room_updated",
+        "room": room.model_dump(by_alias=True, mode="json")
     })
+    
     return result

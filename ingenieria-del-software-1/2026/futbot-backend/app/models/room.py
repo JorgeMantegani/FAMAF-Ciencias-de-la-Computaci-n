@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     DateTime,
     ForeignKey,
@@ -92,6 +93,11 @@ class Room(Base):
 
     type: Mapped[str] = mapped_column(String(10), nullable=False)
 
+    # Cierre y acreditación del ranking se confirman en una sola transacción.
+    ranking_settled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("FALSE")
+    )
+
     # Obligatorio en ligas, NULL en amistosos (lo fuerza el CHECK de limites).
     name: Mapped[str | None] = mapped_column(String(80), nullable=True)
 
@@ -112,6 +118,10 @@ class Room(Base):
 
     # En minutos.
     match_duration_minutes: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+
+    has_penalty_shootout: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("FALSE")
+    )
 
     status: Mapped[str] = mapped_column(
         String(15), nullable=False, default=ROOM_STATUS_WAITING_GUEST

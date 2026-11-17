@@ -1,5 +1,3 @@
-// Provisional field size: the API documents a centered origin but no dimensions.
-// Keep the conversion here until the engine's field dimensions are confirmed.
 const FIELD_WIDTH = 100
 const FIELD_HEIGHT = 60
 const project = ({ x, y }) => ({
@@ -7,7 +5,7 @@ const project = ({ x, y }) => ({
   y: 311 - Math.max(-0.5, Math.min(0.5, y / FIELD_HEIGHT)) * 554,
 })
 
-export default function MatchPitch({ state, protocol_state }) {
+export default function MatchPitch({ state, protocol_state, penalties_active = false }) {
   const players = state.players.length ? state.players : Object.values(protocol_state?.players ?? {}).map((player) => ({
     player_id: player.id,
     club_id: player.club_id,
@@ -16,6 +14,10 @@ export default function MatchPitch({ state, protocol_state }) {
     has_ball: false,
     position: { x: player.x, y: player.y },
   }))
+  const on_field_players = players.filter((player) => player.on_field && player.position)
+  const visible_players = penalties_active
+    ? on_field_players.length === 2 ? on_field_players : []
+    : on_field_players
   const ball = state.ball ?? protocol_state?.ball
   return (
     <svg className="match-pitch" viewBox="0 0 1296 622" role="img" aria-label="Cancha del partido con las posiciones de los jugadores y la pelota">
@@ -29,13 +31,16 @@ export default function MatchPitch({ state, protocol_state }) {
         <circle cx="648" cy="311" r="69" />
         <circle className="match-pitch-center" cx="648" cy="311" r="5" />
       </g>
-      {players.filter((player) => player.on_field && player.position).map((player) => {
+      {visible_players.map((player) => {
         const point = project(player.position)
         const home = player.club_id === state.home_club.club_id
         const number = players.filter((item) => item.club_id === player.club_id).findIndex((item) => item.player_id === player.player_id) + 1
         return (
-          <g key={player.player_id} className={`match-pitch-player match-pitch-player--${home ? 'home' : 'away'}`} transform={`translate(${point.x} ${point.y})`}>
-            <title>{player.name} · {home ? state.home_club.name : state.away_club.name}{player.has_ball ? ' · Con pelota' : ''}</title>
+          <g key={player.player_id} className={
+              `match-pitch-player match-pitch-player--${home ? 'home' : 'away'} ${player.is_selected ? 'match-pitch-player--selected' : ''}`
+            } transform={`translate(${point.x} ${point.y})`}>
+            <title>{player.name} · {home ? state.home_club.name : state.away_club.name}{player.is_selected ? ' · Jugador simulado' : ''}{player.has_ball ? ' · Con pelota' : ''}</title>
+            {player.is_selected && <circle className="match-pitch-selected-ring" r="34" />}
             {player.has_ball && <circle className="match-possession-ring" r="30" />}
             <circle r="24" />
             <text textAnchor="middle" dy=".35em">{number}</text>

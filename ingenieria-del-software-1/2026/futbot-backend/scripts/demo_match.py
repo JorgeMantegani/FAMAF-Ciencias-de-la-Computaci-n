@@ -70,8 +70,11 @@ def make_tick(demo: Demo, elapsed: int) -> MatchTick:
     elif 0 < elapsed < demo.duration:
         actions.append({'type': 'movement', 'player_id': owner['player_id'],
                         'club_id': demo.club_ids[owner_side], 'destination': owner['position']})
+    finished = elapsed >= demo.duration
     return MatchTick.model_validate({
-        'status': 'finished' if elapsed >= demo.duration else 'in_progress',
+        'status': 'finished' if finished else 'in_progress',
+        'phase': 'FINISHED' if finished else 'PLAYING',
+        'pause_duration': None, 'pause_remaining': None,
         'current_time': elapsed, 'score': score,
         'ball': {**owner['position'], 'owner_player_id': owner['player_id']},
         'players': players, 'actions': actions,
@@ -86,7 +89,8 @@ def create_demo(db: Session, duration: int = 120) -> Demo:
     password_hash = hash_password(PASSWORD)
     for side, label in enumerate(('local', 'visitante')):
         email = f'demo.{label}.{suffix}@futbot.test'
-        user = User(username=f'demo-{label}-{suffix}', email=email, password_hash=password_hash)
+        user = User(username=f'demo-{label}-{suffix}', email=email,
+                    password_hash=password_hash, email_verified_at=ahora_utc())
         user.club = Club(name=f'Demo {label.title()} {suffix}')
         db.add(user)
         db.flush()
@@ -94,7 +98,7 @@ def create_demo(db: Session, duration: int = 120) -> Demo:
         emails.append(email)
         clubs.append(club.id)
         behavior = Behavior(club_id=club.id, name='Demo sin motor',
-                            code='def comportamiento(jugador):\n    pass\n', is_preprogrammed=False)
+                            code='def behavior(player):\n    pass\n', is_preprogrammed=False)
         db.add(behavior)
         db.flush()
         squad = []

@@ -1,0 +1,70 @@
+.mini-pitch-viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgb(0 0 0 / 80%);
+}
+
+.mini-pitch-viewer__panel {
+  width: 100%;
+  max-width: 900px;
+  padding: 1.5rem;
+  color: white;
+  background: #0c1610;
+  border: 1px solid #2f5a36;
+  border-radius: 0.75rem;
+  box-shadow: 0 20px 40px rgb(0 0 0 / 40%);
+}
+
+.mini-pitch-viewer__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #2f5a36;
+}
+
+.mini-pitch-viewer__pitch {
+  width: 100%;
+  aspect-ratio: 1296 / 622;
+  margin-top: 1rem;
+  overflow: hidden;
+  border: 1px solid #2f5a36;
+  border-radius: 0.5rem;
+  background: #245a3a;
+}
+
+.mini-pitch-viewer__pitch .match-pitch {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.mini-pitch-viewer__close {
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid #c9973b;
+  border-radius: 5px;
+  background: transparent;
+  color: #c9973b;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.mini-pitch-viewer__close:hover {
+  background: rgb(201 151 59 / 15%);
+}
+
+.mini-pitch-viewer__close:focus-visible {
+  outline: 2px solid #f1d48a;
+  outline-offset: 2px;
+}

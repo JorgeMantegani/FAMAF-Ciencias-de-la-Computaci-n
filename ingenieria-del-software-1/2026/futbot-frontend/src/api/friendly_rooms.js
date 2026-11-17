@@ -1,4 +1,4 @@
-import { request } from './client'
+import { API_URL, request } from './client'
 
 export const ROOM_STATUS = {
   WAITING_GUEST: 'waitingGuest',
@@ -16,4 +16,11 @@ export function start_friendly_match(room_id) {
   return request(`/api/friendly/rooms/${encodeURIComponent(room_id)}/start`, {
     method: 'POST',
   })
+}
+
+export function connect_friendly_room_ws(room_id, club_id) {
+  const base = import.meta.env.VITE_WS_URL || API_URL.replace(/^http/, 'ws')
+  return new WebSocket(
+    `${base.replace(/\/$/, '')}/ws/friendly/${encodeURIComponent(room_id)}?club_id=${encodeURIComponent(club_id)}`
+  )
 }

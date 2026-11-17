@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { connect_match_state } from '../api/matches'
 import { clear_session, read_session } from '../auth/session'
@@ -24,10 +24,25 @@ export default function useMatchState(match_id, on_protocol_message) {
   const navigate = useNavigate()
   const [view, set_view] = useState({ state: null, error: '', loading: true })
   const protocol_message_ref = useRef(on_protocol_message)
+  const send_ref = useRef(null)
+
+  const send_message = useCallback((message) => {
+    if (!send_ref.current) return false
+    return send_ref.current(message)
+  }, [])
+  const socket_ref = useRef(null)
+  const socket_open_ref = useRef(false)
 
   useEffect(() => {
     protocol_message_ref.current = on_protocol_message
   }, [on_protocol_message])
+
+  const send_match_command = useCallback((command) => {
+    if (!socket_ref.current || !socket_open_ref.current) {
+      throw new Error('La conexión del partido no está disponible. Intentá nuevamente.')
+    }
+    socket_ref.current.send(JSON.stringify(command))
+  }, [])
 
   useEffect(() => {
     let disposed = false
@@ -39,10 +54,18 @@ export default function useMatchState(match_id, on_protocol_message) {
     let latest = null
     let attempts = 0
     let connected_session
-
+    send_ref.current = (message) => {
+      if (!socket || socket.readyState !== 1) return false
+      socket.send(JSON.stringify(message))
+      return true
+    }
     const disconnect = () => {
       clearTimeout(watchdog)
       if (socket) {
+        if (socket_ref.current === socket) {
+          socket_ref.current = null
+          socket_open_ref.current = false
+        }
         socket.onopen = socket.onmessage = socket.onerror = socket.onclose = null
         socket.close()
         socket = null
@@ -95,9 +118,12 @@ export default function useMatchState(match_id, on_protocol_message) {
       try {
         const current = connect_match_state(match_id)
         socket = current
+        socket_ref.current = current
+        socket_open_ref.current = false
         arm_watchdog(10000)
         current.onopen = () => {
           if (socket !== current || disposed) return
+          socket_open_ref.current = true
           protocol_message_ref.current?.({ type: 'connection', value: 'open' })
           current.send(JSON.stringify({ type: 'auth', token: connected_session.access_token }))
         }
@@ -110,7 +136,15 @@ export default function useMatchState(match_id, on_protocol_message) {
               current.send(JSON.stringify({ type: 'pong' }))
               return
             }
+            if (message.type === 'error' && message.error_code && message.error_code.startsWith('BEHAVIOR_CHANGE_')) {
+              protocol_message_ref.current?.(event.data)
+              return
+            }
             if (message.type === 'error') {
+              if (!Number.isInteger(message.status)) {
+                protocol_message_ref.current?.(event.data)
+                return
+              }
               if (message.status === 401) { reject_session(); return }
               if (terminal_errors[message.status]) {
                 stopped = true
@@ -146,6 +180,10 @@ export default function useMatchState(match_id, on_protocol_message) {
         }
         current.onerror = retry
         current.onclose = (event) => {
+          if (socket_ref.current === current) {
+            socket_ref.current = null
+            socket_open_ref.current = false
+          }
           if (event.code === 4401) { reject_session(); return }
           const status = { 4403: 403, 4404: 404, 4422: 422 }[event.code]
           if (status) {
@@ -174,8 +212,9 @@ export default function useMatchState(match_id, on_protocol_message) {
       window.removeEventListener('storage', storage_changed)
       window.removeEventListener('focus', check_session)
       document.removeEventListener('visibilitychange', check_session)
+      send_ref.current = null
     }
   }, [match_id, navigate])
 
-  return view
+  return { ...view, send_message,send_match_command }
 }

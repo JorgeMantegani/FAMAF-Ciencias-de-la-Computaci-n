@@ -21,8 +21,9 @@ from app.models.room import (
 )
 from app.models.squad_entry import ROLE_STARTER, SquadEntry
 from app.models.user import User
-from app.services.friendly_service import FriendlyService
+from app.services.squad_validator import validate_squad_selection
 from types import SimpleNamespace
+from uuid import uuid4
 
 """Tests de POST /api/friendly/rooms/{room_id}/join."""
 
@@ -63,12 +64,9 @@ def crear_sala(db: Session, creator_club_id: str) -> Room:
     db.commit()
     return sala
 
-CODIGO = "ABC123"
-
-def armar_body(jugadores: list[Player], comportamiento: Behavior, code: str = CODIGO) -> dict:
+def armar_body(jugadores: list[Player], comportamiento: Behavior) -> dict:
     seleccion = lambda j: {"playerId": j.id, "behaviorId": comportamiento.id}
     return {
-        "code": code,
         "titulares": [seleccion(j) for j in jugadores[:3]],
         "suplentes": [seleccion(j) for j in jugadores[3:6]],
     }
@@ -129,24 +127,23 @@ def como() -> Generator[Callable[[str], None], None, None]:
     app.dependency_overrides.pop(get_current_user, None)
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture
 def validacion(monkeypatch) -> MagicMock:
-    """Mock de la validacion de jugadores y comportamientos (logica de la otra branch).
+    """Espía la validación real de la plantilla.
 
-    Por defecto 'pasa'. Un test puede darle side_effect para simular un error.
+    Un test puede darle side_effect para forzar un error.
     """
-    mock = MagicMock()
-    monkeypatch.setattr(FriendlyService, "validate_players_and_behaviors", mock)
-    return mock
+    spy = MagicMock(wraps=validate_squad_selection)
+    monkeypatch.setattr("app.services.friendly_service.validate_squad_selection", spy)
+    return spy
 
 
 @pytest.fixture(autouse=True)
 def broadcast(monkeypatch) -> AsyncMock:
     """Mock del aviso por WebSocket: no se abre ninguna conexion real."""
     mock = AsyncMock()
-    monkeypatch.setattr("app.routers.friendly_rooms.manager.broadcast", mock)
+    monkeypatch.setattr("app.routers.friendly_rooms.room_manager.broadcast", mock)
     return mock
-
 
 # --- Caso feliz ---
 
@@ -214,7 +211,7 @@ def test_sala_inexistente_devuelve_404_con_el_formato_de_error(
     assert {"detail", "error_code"} <= r.json().keys()   # formato unico del contrato
 
 
-def test_sala_completa_devuelve_400_y_no_se_modifica(
+def test_sala_completa_devuelve_409_y_no_se_modifica(
     client: TestClient, db: Session, como, sala: Room, invitado: Club,
     jugadores: list[Player], comportamiento: Behavior,
 ) -> None:
@@ -225,11 +222,11 @@ def test_sala_completa_devuelve_400_y_no_se_modifica(
 
     r = client.post(url(sala_id), json=armar_body(jugadores, comportamiento))
 
-    assert r.status_code == 400
+    assert r.status_code == 409
     assert db.query(Enrollment).filter_by(room_id=sala_id).count() == 1   # Solo el anfitrion
 
 
-def test_sala_iniciada_devuelve_400(
+def test_sala_iniciada_devuelve_409(
     client: TestClient, db: Session, como, sala: Room, invitado: Club,
     jugadores: list[Player], comportamiento: Behavior,
 ) -> None:
@@ -240,78 +237,25 @@ def test_sala_iniciada_devuelve_400(
 
     r = client.post(url(sala_id), json=armar_body(jugadores, comportamiento))
 
-    assert r.status_code == 400
-
-# --- Codigo de sala (contrasena) ---
-
-
-def test_codigo_incorrecto_devuelve_404_y_no_une_a_la_sala(
-    client: TestClient, db: Session, como, sala: Room, invitado: Club,
-    jugadores: list[Player], comportamiento: Behavior, validacion: MagicMock,
-) -> None:
-    sala_id = sala.id
-    como(invitado.id)
-
-    r = client.post(url(sala_id), json=armar_body(jugadores, comportamiento, code="ZZZZZZ"))
-
-    assert r.status_code == 404
-    db.expire_all()
-    assert db.get(Room, sala_id).status == ROOM_STATUS_WAITING_GUEST   # La sala sigue abierta
-    assert db.query(Enrollment).filter_by(room_id=sala_id).count() == 1
-    validacion.assert_not_called()   # Ni siquiera se llega a validar jugadores
-
-
-def test_codigo_en_minusculas_es_valido(
-    client: TestClient, como, sala: Room, invitado: Club,
-    jugadores: list[Player], comportamiento: Behavior,
-) -> None:
-    como(invitado.id)
-
-    r = client.post(url(sala.id), json=armar_body(jugadores, comportamiento, code=" abc123 "))
-
-    assert r.status_code == 200   # Se normaliza: sin espacios y en mayusculas
-
-
-def test_payload_sin_codigo_devuelve_error_de_validacion(
-    client: TestClient, como, sala: Room, invitado: Club,
-    jugadores: list[Player], comportamiento: Behavior,
-) -> None:
-    como(invitado.id)
-    body = armar_body(jugadores, comportamiento)
-    del body["code"]
-
-    r = client.post(url(sala.id), json=body)
-
-    assert r.status_code == 422
-
-
-def test_codigo_incorrecto_no_revela_si_la_sala_esta_completa(
-    client: TestClient, db: Session, como, sala: Room, invitado: Club,
-    jugadores: list[Player], comportamiento: Behavior,
-) -> None:
-    sala_id = sala.id
-    sala.status = ROOM_STATUS_READY_TO_START   # Sala completa
-    db.commit()
-    como(invitado.id)
-
-    r = client.post(url(sala_id), json=armar_body(jugadores, comportamiento, code="ZZZZZZ"))
-
-    assert r.status_code == 404   # No 400: sin el codigo correcto no se sabe nada de la sala
+    assert r.status_code == 409
 
 # --- Jugadores ---
 
 
 def test_club_con_menos_de_6_jugadores_devuelve_400(
     client: TestClient, db: Session, como, sala: Room, invitado: Club,
-    comportamiento: Behavior, validacion: MagicMock,
+    comportamiento: Behavior,
 ) -> None:
     pocos = crear_jugadores(db, invitado.id, 5)   # El club solo tiene 5 (este test no usa el fixture jugadores)
+    # Con 5 propios, el sexto id no puede ser de su club.
+    unknown_player = SimpleNamespace(id=str(uuid4()))
     como(invitado.id)
 
-    r = client.post(url(sala.id), json=armar_body(pocos + pocos[:1], comportamiento))
+    r = client.post(url(sala.id), json=armar_body(pocos + [unknown_player], comportamiento))
 
     assert r.status_code == 400
-    validacion.assert_not_called()   # El chequeo de cantidad va antes que la validacion
+    assert r.json()["error_code"] == "INVALID_SQUAD"
+    assert "jugador elegido no existe" in r.json()["detail"]
 
 
 def test_valida_la_seleccion_con_el_club_autenticado(
@@ -323,7 +267,25 @@ def test_valida_la_seleccion_con_el_club_autenticado(
 
     client.post(url(sala.id), json=armar_body(jugadores, comportamiento))
 
-    validacion.assert_called_once_with(invitado_id, ANY)   # Se valida contra SU club, no otro
+    # Se valida contra SU club, no otro
+    validacion.assert_called_once_with(ANY, invitado_id, ANY, ANY)
+
+
+def test_players_of_another_club_are_rejected_and_the_room_stays_open(
+    client: TestClient, db: Session, como, sala: Room, anfitrion: Club, invitado: Club,
+    comportamiento: Behavior,
+) -> None:
+    room_id = sala.id
+    host_players = crear_jugadores(db, anfitrion.id, 6)
+    como(invitado.id)
+
+    response = client.post(url(room_id), json=armar_body(host_players, comportamiento))
+
+    assert response.status_code == 400
+    assert response.json()["error_code"] == "INVALID_SQUAD"
+    db.expire_all()
+    assert db.get(Room, room_id).status == ROOM_STATUS_WAITING_GUEST
+    assert db.query(Enrollment).filter_by(room_id=room_id).count() == 1
 
 
 def test_error_de_validacion_se_propaga_y_no_une_a_la_sala(
@@ -362,21 +324,38 @@ def test_unirse_avisa_a_la_sala_por_websocket(
     client: TestClient, como, sala: Room, invitado: Club,
     jugadores: list[Player], comportamiento: Behavior, broadcast: AsyncMock,
 ) -> None:
+    """El broadcast debe emitir type=room_updated con la sala completa incluyendo awayClub."""
     sala_id, invitado_id = sala.id, invitado.id
     como(invitado_id)
 
     client.post(url(sala_id), json=armar_body(jugadores, comportamiento))
 
-    broadcast.assert_awaited_once_with(
-        sala_id,
-        {"type": "guest_joined", "awayClub": invitado_id, "status": "readyToStart"},
-    )
+    broadcast.assert_awaited_once()
+    broadcast_sala_id, payload = broadcast.await_args.args
+
+    assert broadcast_sala_id == sala_id
+    assert payload["type"] == "room_updated"
+
+    room = payload["room"]
+    assert room["roomId"] == sala_id
+    assert room["status"] == "readyToStart"
+
+    # awayClub debe incluir datos completos
+    away = room["awayClub"]
+    assert away is not None
+    assert away["clubId"] == invitado_id
+    assert isinstance(away["clubName"], str) and away["clubName"]
+    assert isinstance(away["players"], list) and len(away["players"]) == 6
+
+    # debe estar presente homeClub
+    assert room["homeClub"] is not None
 
 
 def test_si_falla_unirse_no_se_avisa_por_websocket(
     client: TestClient, db: Session, como, sala: Room, invitado: Club,
     jugadores: list[Player], comportamiento: Behavior, broadcast: AsyncMock,
 ) -> None:
+    """Si la sala ya está iniciada (409), no se debe emitir ningún evento."""
     sala.status = ROOM_STATUS_IN_PROGRESS
     db.commit()
     como(invitado.id)
@@ -384,6 +363,44 @@ def test_si_falla_unirse_no_se_avisa_por_websocket(
     client.post(url(sala.id), json=armar_body(jugadores, comportamiento))
 
     broadcast.assert_not_awaited()
+
+
+def test_si_falla_validacion_no_se_avisa_por_websocket(
+    client: TestClient, db: Session, como, sala: Room, invitado: Club,
+    jugadores: list[Player], comportamiento: Behavior,
+    broadcast: AsyncMock, validacion: MagicMock,
+) -> None:
+    """Si la validación falla (400), no se debe emitir ningún evento."""
+    from fastapi import HTTPException
+    validacion.side_effect = HTTPException(400, detail="Jugador invalido.")
+    como(invitado.id)
+
+    r = client.post(url(sala.id), json=armar_body(jugadores, comportamiento))
+
+    assert r.status_code == 400
+    broadcast.assert_not_awaited()
+
+
+# test con broadcast sin mock del room_manager
+
+
+def test_broadcast_no_falla_por_cache_de_sesion_post_commit(
+    client: TestClient, db: Session, como, sala: Room, invitado: Club,
+    jugadores: list[Player], comportamiento: Behavior,
+) -> None:
+    """Verifica que get_friendly_room puede leer el club visitante después del commit
+    de join_room sin problemas de caché SQLAlchemy. Se usa el broadcast real pero sin
+    WebSocket suscrito, por lo que es un no-op seguro."""
+    
+    # Sin override del broadcast: el room_manager real no tiene suscriptores y no hace nada.
+    sala_id, invitado_id = sala.id, invitado.id
+    como(invitado_id)
+
+    r = client.post(url(sala_id), json=armar_body(jugadores, comportamiento))
+
+    # Si devuelve 200 confirma que el commit fue visible para get_friendly_room
+    assert r.status_code == 200
+    assert r.json()["status"] == "readyToStart"
 
 
 # --- Autenticacion ---
@@ -395,3 +412,51 @@ def test_sin_token_devuelve_401(
     r = client.post(url(sala.id), json=armar_body(jugadores, comportamiento))   # Sin override
 
     assert r.status_code == 401   # AJUSTAR si get_current_user devuelve otro codigo
+
+# --- tests nuevos ---
+
+def test_unirse_a_una_sala_sin_codigo_devuelve_200(
+    client: TestClient, como, sala: Room, invitado: Club,
+    jugadores: list[Player], comportamiento: Behavior,
+) -> None:
+    como(invitado.id)
+
+    r = client.post(url(sala.id), json=armar_body(jugadores, comportamiento))
+
+    assert r.status_code == 200
+
+
+def test_un_codigo_enviado_de_mas_se_ignora(
+    client: TestClient, como, sala: Room, invitado: Club,
+    jugadores: list[Player], comportamiento: Behavior,
+) -> None:
+    como(invitado.id)
+    body = {**armar_body(jugadores, comportamiento), "code": "ZZZZZZ"}
+
+    r = client.post(url(sala.id), json=body)
+
+    assert r.status_code == 200
+
+def test_club_no_puede_unirse_a_su_propia_sala(
+    client: TestClient,
+    db: Session,
+    como,
+    sala: Room,
+    anfitrion: Club,
+    comportamiento: Behavior,
+) -> None:
+    jugadores_anfitrion = crear_jugadores(db, anfitrion.id, 6)
+    como(anfitrion.id)
+
+    r = client.post(
+        url(sala.id),
+        json=armar_body(jugadores_anfitrion, comportamiento),
+    )
+    assert r.status_code == 409
+
+    assert db.query(Enrollment).filter_by(
+        room_id=sala.id
+    ).count() == 1
+
+    db.expire_all()
+    assert db.get(Room, sala.id).status == ROOM_STATUS_WAITING_GUEST

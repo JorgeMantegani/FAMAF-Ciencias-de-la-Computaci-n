@@ -1,0 +1,56 @@
+.join-league-facts {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.join-league-facts div {
+  padding: 8px 12px;
+  border: 1px solid var(--fb-panel-border);
+  border-radius: var(--fb-radius-md);
+  background: var(--fb-input);
+}
+
+.join-league-facts dt {
+  font-family: var(--fb-font-body);
+  font-size: 12px;
+  color: var(--fb-text-muted);
+}
+
+.join-league-facts dd {
+  margin: 4px 0 0;
+  font-size: 16px;
+  color: var(--fb-text);
+}
+
+.join-league-password-label {
+  font-family: var(--fb-font-body);
+  font-size: 12px;
+  color: var(--fb-text-muted);
+}
+
+.join-league-password {
+  width: 100%;
+  max-width: 360px;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid var(--fb-panel-border);
+  border-radius: var(--fb-radius-sm);
+  background: var(--fb-input);
+  color: var(--fb-text);
+  font-family: var(--fb-font-body);
+  font-size: 14px;
+}
+
+.join-league-password:focus-visible {
+  outline: 3px solid var(--fb-text);
+  outline-offset: 2px;
+}
+
+.join-league-squad {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}

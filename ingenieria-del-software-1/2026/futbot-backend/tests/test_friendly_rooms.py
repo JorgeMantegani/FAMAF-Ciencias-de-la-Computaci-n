@@ -56,7 +56,7 @@ def create_behavior(db: Session, club_id: str | None, name: str) -> Behavior:
     behavior = Behavior(
         club_id=club_id,
         name=name,
-        code="def comportamiento(jugador):\n    pass\n",
+        code="def behavior(player):\n    pass\n",
         is_preprogrammed=club_id is None,
     )
     db.add(behavior)
@@ -81,6 +81,26 @@ def add_squad(
     db.commit()
     return players
 
+def add_existing_squad(
+    db: Session,
+    room: Room,
+    club: Club,
+    behavior: Behavior,
+    players: list[Player],
+) -> None:
+    db.add(Enrollment(room_id=room.id, club_id=club.id))
+
+    for index, player in enumerate(players):
+        db.add(
+            SquadEntry(
+                room_id=room.id,
+                player_id=player.id,
+                behavior_id=behavior.id,
+                role=ROLE_STARTER if index < 3 else ROLE_SUBSTITUTE,
+            )
+        )
+
+    db.commit()
 
 def create_friendly_room(db: Session, creator: Club, room_status: str) -> Room:
     room = Room(
@@ -430,7 +450,7 @@ def test_a_squad_with_a_player_from_a_third_club_is_invalid(
     assert_invalid_squad_without_side_effects(client, ready_room, db)
 
 
-def test_a_squad_with_a_player_already_playing_is_invalid(
+def test_a_squad_with_a_player_already_playing_is_valid(
     client: TestClient, login_as, club: Club, ready_room: Room, db: Session
 ) -> None:
     player = db.scalars(select(Player).where(Player.club_id == club.id)).first()
@@ -438,7 +458,7 @@ def test_a_squad_with_a_player_already_playing_is_invalid(
     db.commit()
     login_as(club)
 
-    assert_error(client.post(start_url(ready_room.id)), 400, "INVALID_SQUAD")
+    assert(client.post(start_url(ready_room.id)).status_code == 200)
 
 
 def test_a_squad_with_another_clubs_behavior_is_invalid(
@@ -472,6 +492,25 @@ def test_a_squad_with_a_deleted_behavior_is_invalid(
     login_as(club)
 
     assert_invalid_squad_without_side_effects(client, ready_room, db)
+
+
+def test_start_error_names_whose_squad_is_invalid(
+    client: TestClient, login_as, club: Club, away_club: Club, ready_room: Room, db: Session
+) -> None:
+    player = db.scalars(select(Player).where(Player.club_id == away_club.id)).first()
+    player.deleted_at = utc_now()
+    db.commit()
+
+    login_as(club)
+    rival_view = client.post(start_url(ready_room.id))
+    login_as(away_club)
+    own_view = client.post(start_url(ready_room.id))
+
+    assert_error(rival_view, 400, "INVALID_SQUAD")
+    assert "club rival" in rival_view.json()["detail"]
+    assert "tu club" not in rival_view.json()["detail"]
+    assert_error(own_view, 400, "INVALID_SQUAD")
+    assert "Tu plantilla" in own_view.json()["detail"]
 
 
 # --- Behavior lock ---
@@ -587,7 +626,72 @@ def test_read_a_room_of_another_club_is_forbidden(
 
 
 # --- POST /api/friendly/rooms ---
+def test_create_two_friendly_room_with_same_players(
+        client: TestClient, 
+        club: Club, 
+        db: Session, 
+        auth_headers: dict[str, str],
+        crear_player, 
+        comportamiento_prueba):
+    """
+    Se puede crear dos salas amistosas con los mismos jugadores.
+    """
+    # Crear 6 jugadores para el club usando fixture
+    
+    jugadores = [crear_player(club.id, name=f"Jugador {i}") for i in range(1,7)]
 
+    # Formatear payload con titulares y suplentes
+    payload = {
+            "starters": [
+                {"player_id": p.id, "behavior_id": str(comportamiento_prueba.id)}
+                for p in jugadores[:3]
+            ],
+            "substitutes": [
+                {"player_id": p.id, "behavior_id": str(comportamiento_prueba.id)}
+                for p in jugadores[3:]
+            ],
+        }
+    # Peticion HTTP autenticada
+    response1 = client.post("/api/friendly/rooms", headers=auth_headers, json=payload)
+    assert response1.status_code == 201
+
+    # Intentar crear otra sala con los mismos jugadores
+    response2 = client.post("/api/friendly/rooms", headers=auth_headers, json=payload)
+    assert response2.status_code == 201
+    assert response1.json()["room_id"] != response2.json()["room_id"]
+
+def test_a_player_can_play_in_two_active_friendly_matches(
+        client: TestClient,
+        login_as,
+        db: Session,
+        club: Club,
+        away_club: Club,
+        ready_room: Room,
+        crear_player,
+        default_behavior: Behavior
+):
+    """
+    Un jugador puede estar en dos partidos amistosos activos al mismo tiempo.
+    """
+    home_players = db.scalars(
+        select(Player)
+        .where(Player.club_id == club.id)
+        .order_by(Player.id)
+    ).all()
+    assert len(home_players) == 6
+    # Creo al segundo rival
+    second_away_club = create_club(db, "second_away")
+    second_room = create_friendly_room(db, club, ROOM_STATUS_READY_TO_START)
+    add_existing_squad(db, second_room, club, default_behavior, home_players)
+    add_squad(db, second_room, second_away_club, default_behavior, crear_player)
+
+    login_as(club)
+    # Inicio el primer partido
+    response1 = client.post(start_url(ready_room.id))
+    assert response1.status_code == 200
+    # Inicio el segundo partido
+    response2 = client.post(start_url(second_room.id))
+    assert response2.status_code == 200
 
 def test_create_friendly_room_unauthorized_without_token(client: TestClient):
     """
@@ -623,11 +727,11 @@ def test_create_friendly_room_integration_success(
     # Formatear payload con titulares y suplentes
     payload = {
         "starters": [
-            {"player_id": p.name, "behavior_id": str(comportamiento_prueba.id)}
+            {"player_id": p.id, "behavior_id": str(comportamiento_prueba.id)}
             for p in jugadores[:3]
         ],
         "substitutes": [
-            {"player_id": p.name, "behavior_id": str(comportamiento_prueba.id)}
+            {"player_id": p.id, "behavior_id": str(comportamiento_prueba.id)}
             for p in jugadores[3:]
         ],
     }
@@ -639,7 +743,6 @@ def test_create_friendly_room_integration_success(
     assert response.status_code == 201
     data = response.json()
     assert "room_id" in data
-    assert "room_code" in data
     assert data["status"] == "waitingGuest"
     assert data["home_club"] == str(club.id)
 
@@ -708,7 +811,46 @@ def test_create_friendly_room_duplicate_players_400(
 
     response = client.post("/api/friendly/rooms", headers=auth_headers, json=payload)
     assert response.status_code == 400
+    assert response.json()["error_code"] == "INVALID_SQUAD"
     assert "mismo jugador" in response.json()["detail"].lower()
+
+
+def squad_payload(player_values: list[str], behavior: Behavior, player_key: str = "player_id",
+                  behavior_key: str = "behavior_id") -> dict:
+    """Payload de crear sala con los valores de jugador y el formato de claves indicados."""
+    def selection(value: str) -> dict:
+        return {player_key: value, behavior_key: behavior.id}
+
+    return {
+        "starters": [selection(v) for v in player_values[:3]],
+        "substitutes": [selection(v) for v in player_values[3:]],
+    }
+
+
+def test_create_friendly_room_accepts_camel_case_ids(
+    client: TestClient, db: Session, auth_headers: dict[str, str],
+    club_players: list[Player], comportamiento_prueba: Behavior,
+):
+    player_ids = [p.id for p in club_players]
+    payload = squad_payload(player_ids, comportamiento_prueba, "playerId", "behaviorId")
+
+    response = client.post("/api/friendly/rooms", headers=auth_headers, json=payload)
+
+    assert response.status_code == 201
+    saved = db.query(SquadEntry).filter_by(room_id=response.json()["room_id"]).all()
+    assert {e.player_id for e in saved} == set(player_ids)
+
+
+def test_create_friendly_room_rejects_player_names(
+    client: TestClient, db: Session, auth_headers: dict[str, str],
+    club_players: list[Player], comportamiento_prueba: Behavior,
+):
+    payload = squad_payload([p.name for p in club_players], comportamiento_prueba)
+
+    response = client.post("/api/friendly/rooms", headers=auth_headers, json=payload)
+
+    assert_error(response, 400, "INVALID_SQUAD")
+    assert count(db, Room) == 0
 
 def test_start_publishes_initial_state_for_websocket(client, db, club, ready_room, auth_headers):
     response = client.post(start_url(ready_room.id), headers=auth_headers)

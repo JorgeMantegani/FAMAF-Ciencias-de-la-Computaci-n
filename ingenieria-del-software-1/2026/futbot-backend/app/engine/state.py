@@ -1,5 +1,6 @@
 """Punto de integración del motor: ticks en memoria y eventos durables."""
 from collections import Counter
+from collections.abc import Iterable
 from typing import Protocol
 
 from sqlalchemy import exists, select, update
@@ -8,12 +9,13 @@ from sqlalchemy.orm import Session
 from app.db.base import ahora_utc
 from app.engine.live_state import match_states
 from app.models.goal import Goal
-from app.models.match import ESTADO_IN_PROGRESS, ESTADO_PAUSED, Match
+from app.models.match import ESTADO_PRE_MATCH, ESTADO_IN_PROGRESS, ESTADO_PAUSED, Match
 from app.models.match_player import MatchPlayer
 from app.models.player import Player
-from app.models.room import Room
+from app.models.room import ROOM_TYPE_PRIVATE, ROOM_TYPE_PUBLIC, Room
 from app.schemas.match_state import MatchState, MatchTick
 from app.services.match_state import prepare_match_state, publish_prepared_state
+from app.ws.leagues_hub import leagues_hub
 from dataclasses import dataclass, field
 from enum import Enum
 import math
@@ -28,6 +30,7 @@ class MatchPhase(str, Enum):
     PLAY = "play"
     HYDRATION = "hydration"
     HALFTIME = "halftime"
+    PENALTIES = "penalties"
     FINISHED = "finished"
 
 class MatchStateSource(Protocol):
@@ -40,7 +43,15 @@ def publish_engine_state(db: Session, match_id: str, engine: MatchStateSource, *
     return publish_engine_tick(db, match_id, engine.capture_state(), expected_revision=expected_revision)
 
 
-def publish_engine_tick(db: Session, match_id: str, tick: MatchTick, *, expected_revision: int) -> MatchState:
+def publish_engine_tick(
+    db: Session,
+    match_id: str,
+    tick: MatchTick,
+    *,
+    expected_revision: int,
+    penalty_winner_club_id: str | None = None,
+    events: Iterable[dict] = (),
+) -> MatchState:
     """Usar una sesión limpia y datos de creación ya confirmados.
 
     Solo hace commit ante goles o cambios de estado (pausa/reanudación/fin).
@@ -51,6 +62,12 @@ def publish_engine_tick(db: Session, match_id: str, tick: MatchTick, *, expected
     with match_states.lock(match_id):
         state = prepare_match_state(db, match_id, tick, expected_revision=expected_revision)
         match = db.get(Match, match_id)
+        standings_league_id = None
+        if penalty_winner_club_id is not None:
+            if tick.status != "finished":
+                raise ValueError("El ganador de penales solo puede guardarse al finalizar")
+            if penalty_winner_club_id not in (match.home_club_id, match.away_club_id):
+                raise ValueError("El ganador de penales debe participar del partido")
         goals = [action for action in state.actions if action.type == 'goal']
         counts = Counter(str(goal.club_id) for goal in goals)
         expected = Counter({
@@ -73,11 +90,15 @@ def publish_engine_tick(db: Session, match_id: str, tick: MatchTick, *, expected
                         entry.goals += 1
                 match.home_goals, match.away_goals = state.score.home, state.score.away
                 match.status = state.status
+                if penalty_winner_club_id is not None:
+                    match.penalty_winner_club_id = penalty_winner_club_id
                 if state.status == 'finished':
                     match.finished_at = ahora_utc()
                     room = db.get(Room, match.room_id)
                     if room.type == 'friendly':
                         room.status, room.finished_at = 'finished', match.finished_at
+                    elif room.type in (ROOM_TYPE_PUBLIC, ROOM_TYPE_PRIVATE):
+                        standings_league_id = room.id
                     roster_ids = select(MatchPlayer.player_id).where(
                         MatchPlayer.match_id == match_id
                     )
@@ -88,7 +109,7 @@ def publish_engine_tick(db: Session, match_id: str, tick: MatchTick, *, expected
                         .where(
                             MatchPlayer.player_id == Player.id,
                             MatchPlayer.match_id != match_id,
-                            Match.status.in_((ESTADO_IN_PROGRESS, ESTADO_PAUSED)),
+                            Match.status.in_((ESTADO_PRE_MATCH, ESTADO_IN_PROGRESS, ESTADO_PAUSED)),
                         )
                     )
                     db.execute(
@@ -100,7 +121,9 @@ def publish_engine_tick(db: Session, match_id: str, tick: MatchTick, *, expected
             except Exception:
                 db.rollback()
                 raise
-        publish_prepared_state(state)
+        publish_prepared_state(state, events=events)
+        if standings_league_id is not None:
+            leagues_hub.notify_standings_updated(standings_league_id, match_id)
         return state
 
 @dataclass(frozen=True, slots=True) #vector 2D

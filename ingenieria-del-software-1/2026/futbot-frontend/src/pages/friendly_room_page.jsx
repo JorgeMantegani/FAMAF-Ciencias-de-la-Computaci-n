@@ -7,7 +7,9 @@ import Spinner from '../components/atoms/spinner'
 import Alert from '../components/molecules/alert'
 import RoomHeader from '../components/organisms/room_header'
 import TeamPanel from '../components/organisms/team_panel'
+import { read_session } from '../auth/session'
 import { useFriendlyRoom } from '../hooks/use_friendly_room'
+import { useFriendlyRoomSocket } from '../hooks/use_friendly_room_socket'
 import './friendly_room_page.css'
 
 const STATUS_CHIPS = {
@@ -37,8 +39,17 @@ function error_message(error, fallback) {
 export default function FriendlyRoomPage() {
   const { room_id } = useParams()
   const navigate = useNavigate()
-  const { room, load_error, is_starting, start_error, start, refresh } = useFriendlyRoom(room_id)
+  const session = read_session()
+  const club_id = session?.club_id
+
+  const { room, load_error, is_starting, start_error, start, refresh, update_room } = useFriendlyRoom(room_id)
   const [view_message, set_view_message] = useState('')
+
+  const {connection_error} = useFriendlyRoomSocket({
+    room_id, 
+    club_id, 
+    onRoomUpdated: update_room,
+  })
 
   if (load_error) {
     return (
@@ -68,7 +79,7 @@ export default function FriendlyRoomPage() {
     )
     navigate(`/partidos/${match_id}`, { state: { behavior_names } })
   }
-
+  
   async function handle_start() {
     const result = await start()
     if (result) open_match(result.matchId)
@@ -130,9 +141,14 @@ export default function FriendlyRoomPage() {
         title="Amistoso"
         status={STATUS_CHIPS[room.status] ?? { label: room.status, variant: 'default' }}
         description="Cuando ambos clubes estén en la sala, cualquiera de los dos puede iniciar el partido."
-        roomCode={room.roomCode}
         actions={actions}
       />
+      {connection_error && (!room.awayClub && (
+        <Alert variant="warning">
+          Se perdió la conexión con el servidor. Intentando reestablecer...
+        </Alert>
+        )
+      )}
 
       {start_error && (
         <Alert>{error_message(start_error, 'No se pudo iniciar el partido.')}</Alert>

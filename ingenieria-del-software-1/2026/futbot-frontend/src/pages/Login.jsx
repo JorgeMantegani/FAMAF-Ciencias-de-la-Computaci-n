@@ -3,12 +3,14 @@ import { Link, useNavigate } from 'react-router-dom'
 import { login } from '../api/client'
 import { read_session, save_session } from '../auth/session'
 import './Login.css'
+import ResendVerificationForm from '../components/resend_verification_form'
 
 export default function Login() {
   const [email, set_email] = useState('')
   const [password, set_password] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [remember, setRemember] = useState(true)
+  const [unverifiedEmail, setUnverifiedEmail] = useState(null)
   const [error, set_error] = useState('')
   const [status, set_status] = useState('idle')
   const submitting = useRef(false)
@@ -29,6 +31,7 @@ export default function Login() {
     if (submitting.current || !event.currentTarget.reportValidity()) return
     submitting.current = true
     set_error('')
+    setUnverifiedEmail(null)
     set_status('loading')
     try {
       const session = await login({ email, password })
@@ -36,7 +39,10 @@ export default function Login() {
       set_password('')
       set_status('success')
     } catch (cause) {
-      set_error(cause.status === 401
+      if (cause.error_code === 'EMAIL_NOT_VERIFIED') setUnverifiedEmail(email)
+      set_error(cause.error_code === 'EMAIL_NOT_VERIFIED'
+        ? 'Debés validar tu email antes de iniciar sesión'
+        : cause.status === 401
         ? `Credenciales inválidas.${cause.message && cause.message !== 'Credenciales inválidas' ? ` ${cause.message}` : ''}`
         : cause.status
           ? cause.message
@@ -119,6 +125,8 @@ export default function Login() {
                   <LoginIcon kind="arrow" />
                 </button>
               </form>
+              <p className="login-footer"><Link to="/forgot-password">¿Olvidaste tu contraseña?</Link></p>
+              {unverifiedEmail !== null && <ResendVerificationForm key={unverifiedEmail} initialEmail={unverifiedEmail} />}
             </div>
             <footer className="login-footer">
               <p>¿No tenés cuenta? <Link to="/register">Crear cuenta</Link></p>

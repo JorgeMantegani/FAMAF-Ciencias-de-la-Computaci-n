@@ -2,6 +2,7 @@
 
 Usage, from the backend root:  .venv\\Scripts\\python.exe -m scripts.seed_friendly_rooms
 Only adds data. Re-runnable: reuses the test users, creates new players and rooms each time.
+Marks these demo users as email-verified so they can log in without receiving email.
 """
 import random
 import string
@@ -11,7 +12,7 @@ from sqlalchemy.orm import Session
 
 import app.models  # noqa: F401
 from app.core.security import hash_password
-from app.db.base import Base
+from app.db.base import Base, ahora_utc
 from app.db.init_db import cargar_comportamientos_por_defecto
 from app.db.session import engine
 from app.models.behavior import Behavior
@@ -58,14 +59,10 @@ def _get_or_create_club(db: Session, data: dict) -> Club:
         db.flush()
         db.add(Club(user_id=user.id, name=data["club_name"]))
         db.flush()
+    # These fixed .test accounts are for manual testing, including existing seed users.
+    if user.email_verified_at is None:
+        user.email_verified_at = ahora_utc()
     return user.club
-
-
-def _new_room_code(db: Session) -> str:
-    while True:
-        code = "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
-        if db.scalar(select(Room).where(Room.code == code)) is None:
-            return code
 
 
 def _create_room(db: Session, creator: Club, status: str) -> Room:
@@ -76,7 +73,6 @@ def _create_room(db: Session, creator: Club, status: str) -> Room:
         max_clubs=2,
         match_duration_minutes=5,
         status=status,
-        code=_new_room_code(db),
     )
     db.add(room)
     db.flush()

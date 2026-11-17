@@ -1,5 +1,5 @@
 
-function BehaviorRow({ name, code, isDefault, onDetails }) {
+function BehaviorRow({ name, code, isDefault, onDetails, onEdit, onDelete }) {
     return (
         <div className="flex items-center px-6 py-4 border-b border-green-900/30 hover:bg-[#112419]/50 transition-colors">
             
@@ -11,21 +11,42 @@ function BehaviorRow({ name, code, isDefault, onDetails }) {
                 </p>
             </div>
 
-            {/* Tipo (Preprogramado/propio), Botón */}
-            <div className="w-[340px] flex items-center justify-between gap-3">
+            {/* Tipo y Botones de acción con ancho expandido para evitar desbordes */}
+            <div className="w-[390px] flex items-center justify-between gap-2 shrink-0">
                 {/* Tipo */}
-                <div className="flex items-center gap-2 border border-green-800/50 bg-[#0c1610] px-3 py-1 rounded-full text-xs text-gray-300 w-36 shrink-0">
+                <div className="flex items-center gap-2 border border-green-800/50 bg-[#0c1610] px-3 py-1 rounded-full text-xs text-gray-300 w-32 shrink-0">
                     <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isDefault ? 'bg-[#f0a95b]' : 'bg-blue-500'}`}></span>
                     <span className="truncate">{isDefault ? 'Preprogramado' : 'Propio'}</span>
                 </div>
-                {/* Botón  */}
-                <button 
-                    className="border border-green-700 text-green-500 hover:text-[#f0a95b] hover:border-[#f0a95b] px-3 py-1 rounded-md text-xs font-mono transition-colors whitespace-nowrap shrink-0"
-                    onClick={onDetails}
-                >
-                    Ver detalles
-                </button>
-              
+
+                {/* Grupo de Botones */}
+                <div className="flex items-center gap-1.5">
+                    <button 
+                        className="border border-green-700 text-green-500 hover:text-[#f0a95b] hover:border-[#f0a95b] px-2.5 py-1 rounded-md text-xs font-mono transition-colors whitespace-nowrap shrink-0"
+                        onClick={onDetails}
+                    >
+                        Ver detalles
+                    </button>
+
+                    {!isDefault && (
+                        <>
+                            <button 
+                                type="button"
+                                onClick={onEdit}
+                                className="border border-green-700 text-green-500 hover:text-[#f0a95b] hover:border-[#f0a95b] px-2.5 py-1 rounded-md text-xs font-mono transition-colors whitespace-nowrap shrink-0"
+                            >
+                                Editar
+                            </button>
+
+                            <button
+                                className="border border-red-800/80 text-red-400 hover:bg-red-900/40 px-2.5 py-1 rounded-md text-xs font-mono transition-colors whitespace-nowrap shrink-0"
+                                onClick={onDelete}
+                            >
+                                Eliminar
+                            </button>
+                        </>
+                    )}
+                </div>
             </div>
         </div>
     );

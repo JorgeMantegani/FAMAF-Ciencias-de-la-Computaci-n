@@ -26,3 +26,33 @@
     flex-direction: column;
     align-items: center;
 }
+
+.preview-button {
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid #c9973b;
+  border-radius: 5px;
+  background: #c9973b;
+  color: #1a1a1a;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.2s, opacity 0.2s;
+}
+
+.preview-button:hover:not(:disabled) {
+  background: #d9a94d;
+}
+
+.preview-button:focus-visible {
+  outline: 2px solid #f1d48a;
+  outline-offset: 2px;
+}
+
+.preview-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}

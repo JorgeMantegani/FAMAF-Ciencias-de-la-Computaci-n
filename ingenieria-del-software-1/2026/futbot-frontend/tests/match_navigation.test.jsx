@@ -35,7 +35,7 @@ it.each([false, true])('abre la vista real desde la sala (ya iniciado: %s)', asy
   get_friendly_room.mockResolvedValue({ ...room, ...(started ? { status: 'inProgress', matchId: 'match-1' } : {}) })
   window.history.replaceState(null, '', '/amistosos/room-1/sala')
   render(<App />)
-  await userEvent.click(await screen.findByRole('button', { name: started ? 'Ir al partido' : 'Iniciar partido' }))
+  await userEvent.click(await screen.findByRole('button', { name: started ? 'Ver partido' : 'Iniciar partido' }))
   expect(window.location.pathname).toBe('/partidos/match-1')
   expect(await screen.findByRole('img', { name: /Cancha del partido/ })).toBeInTheDocument()
   expect(screen.getByText('Comportamiento: Defensa rival')).toBeInTheDocument()

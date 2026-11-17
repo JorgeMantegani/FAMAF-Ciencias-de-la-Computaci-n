@@ -1,3 +1,5 @@
+from app.models.password_reset import PasswordResetToken
+from app.models.email_verification import EmailVerificationToken, VerificationRateLimit
 from app.models.auth_session import AuthSession
 from app.models.behavior import Behavior
 from app.models.club import Club
@@ -11,6 +13,7 @@ from app.models.squad_entry import SquadEntry
 from app.models.user import User
 
 __all__ = [
-    "AuthSession", "Behavior", "Club", "Enrollment", "Goal", "Match",
+    "PasswordResetToken",
+    "EmailVerificationToken", "VerificationRateLimit", "AuthSession", "Behavior", "Club", "Enrollment", "Goal", "Match",
     "MatchPlayer", "Player", "Room", "SquadEntry", "User",
 ]

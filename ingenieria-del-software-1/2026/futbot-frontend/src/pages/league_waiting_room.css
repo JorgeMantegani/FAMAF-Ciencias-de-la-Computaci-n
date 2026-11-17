@@ -1,0 +1,162 @@
+.waiting-page {
+  min-height: 100vh;
+  width: 100%;
+  background: #0b2a16;
+  color: #f3ecdd;
+  font-family: 'IBM Plex Sans', sans-serif;
+  display: flex;
+  flex-direction: column;
+}
+
+.waiting-container {
+  min-height: 100vh;
+  width: 100%;
+  background: #0b2a16;
+  color: #f3ecdd;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.waiting-notice {
+  font-size: 1.2rem;
+  font-family: 'IBM Plex Sans', sans-serif;
+  color: #c9d6c5;
+}
+
+.waiting-topbar {
+  min-height: 72px;
+  padding: 0 32px;
+  background: #06190e;
+  border-bottom: 1px solid #8a6a4a;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.waiting-content {
+  max-width: 900px;
+  width: 100%;
+  margin: 32px auto;
+  padding: 0 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.waiting-card {
+  background: #0f381f;
+  border: 1px solid #fff3;
+  border-radius: 12px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.status-badge {
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-weight: bold;
+  text-align: center;
+  margin-top: 8px;
+}
+
+.status-badge.waiting {
+  background: #4a3b11;
+  color: #f3ecdd;
+}
+
+.status-badge.ready {
+  background: #1e5c2c;
+  color: #c9ffdb;
+}
+
+.participants-list {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.participant-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: #0b2a16;
+  border-radius: 6px;
+  border: 1px solid #2f5a36;
+}
+
+.participant-item.creator-item {
+  border-color: #bf9548;
+}
+
+.creator-tag {
+  background: #bf9548;
+  color: #0b2a16;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: bold;
+}
+
+.creator-actions {
+  display: flex;
+  gap: 16px;
+  justify-content: flex-end;
+}
+
+.waiting-btn-primary {
+  background: #bf9548;
+  color: #0b2a16;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.waiting-btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.waiting-btn-danger {
+  background: #7a2828;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.waiting-btn-secondary {
+  background: transparent;
+  border: 1px solid #bf9548;
+  color: #bf9548;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.waiting-notice-card {
+  text-align: center;
+  padding: 16px;
+  background: #0f381f;
+  border-radius: 8px;
+  font-style: italic;
+  color: #c9d6c5;
+}
+
+.waiting-error {
+  background: #5c1d1d;
+  color: #ffdddd;
+  padding: 12px;
+  border-radius: 6px;
+}

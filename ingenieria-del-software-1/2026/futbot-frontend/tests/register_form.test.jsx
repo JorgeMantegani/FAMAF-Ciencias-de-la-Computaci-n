@@ -111,7 +111,7 @@ describe('RegisterForm', () => {
     );
   });
 
-  it('Debe enviar el payload correcto y mostrar mensaje de éxito (201)', async () => {
+  it('Debe enviar el payload correcto e ir al aviso de verificación (201)', async () => {
     const user = userEvent.setup();
     authApi.registerUser.mockResolvedValueOnce({ id: 1, message: 'OK' });
 
@@ -137,7 +137,9 @@ describe('RegisterForm', () => {
     });
 
     // Verifica que aparezca el mensaje de éxito en pantalla
-    expect(await screen.findByText(/Usuario registrado correctamente/i)).toBeInTheDocument();
+    expect(mockNavigate).toHaveBeenCalledWith('/check-email', { replace: true, state: { email: 'grupoTransistores@mail.com' } });
+    await new Promise((resolve) => setTimeout(resolve, 2100));
+    expect(mockNavigate).toHaveBeenCalledTimes(1);
   });
 
   it('Debe mostrar mensaje de error si el backend falla (Simula 400)', async () => {

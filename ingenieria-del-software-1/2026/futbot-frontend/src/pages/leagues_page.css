@@ -1,0 +1,129 @@
+.leagues-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.leagues-search {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.leagues-search label {
+  display: block;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  line-height: 16px;
+  color: #fffc;
+}
+
+.leagues-search input {
+  width: min(360px, 100%);
+  box-sizing: border-box;
+  margin-top: 6px;
+  padding: 10px 12px;
+  border: 1px solid #fff3;
+  border-radius: 5px;
+  background: #0b2a16cc;
+  color: #f3ecdd;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 14px;
+}
+
+.leagues-search input:focus-visible {
+  outline: 3px solid #f3ecdd;
+  outline-offset: 2px;
+}
+
+.leagues-count {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  color: #fffc;
+}
+
+.leagues-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.leagues-item {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: #0b2a16cc;
+  border: 1px solid #fff3;
+  border-radius: 16px;
+}
+
+.leagues-item--selected {
+  border-color: #bf9548;
+  box-shadow: 0 0 0 2px #bf954866;
+}
+
+.leagues-item h2 {
+  font-size: 20px;
+  color: white;
+  overflow-wrap: anywhere;
+}
+
+.leagues-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+}
+
+.leagues-chip {
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid #fff3;
+  font-size: 11px;
+}
+
+.leagues-chip--open {
+  background: #1f4a2a;
+  color: #d8f0d8;
+}
+
+.leagues-chip--started {
+  background: #4b2020;
+  color: #ffdddd;
+}
+
+.leagues-item .home-action {
+  align-self: flex-start;
+  background: #d4aa5d;
+}
+
+.leagues-selection {
+  padding: 16px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  background: #0b2a16cc;
+  border: 1px solid #bf9548;
+  border-radius: 16px;
+}
+
+.leagues-selection h2 {
+  font-size: 20px;
+  color: white;
+  overflow-wrap: anywhere;
+}
+
+.leagues-selection p {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  color: #fffc;
+}

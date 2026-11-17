@@ -14,10 +14,12 @@ FORMATION: list[tuple[float, float]] = [
     (0.40, 0.70),   # adelantado, banda inferior
 ]
 PLAYERS_PER_TEAM = 3
+PLAYERS_IN_SIM_AWAY = 3
+PLAYERS_IN_SIM_HOME = 3
 
 @dataclass(frozen=True, slots=True)
 class PlayerSpec:
-    id: int
+    id: str
     speed: float
     control: float
     strength: float
@@ -55,10 +57,15 @@ def create_initial_state(
     field: FieldConfig,
     home: list[PlayerSpec],
     away: list[PlayerSpec],
+    is_simulation_mode: bool = False
 ) -> MatchState:
-    if len(home) != PLAYERS_PER_TEAM or len(away) != PLAYERS_PER_TEAM:
-        raise ValueError(f"Cada equipo necesita {PLAYERS_PER_TEAM} titulares") #comprueba que haya 3 jugadores por equipo, tal vez inecesario o la comprobacion deberia estar en otro lado
-
+    if not is_simulation_mode:
+        if len(home) != PLAYERS_PER_TEAM or len(away) != PLAYERS_PER_TEAM:
+            raise ValueError(f"Cada equipo necesita {PLAYERS_PER_TEAM} titulares") #comprueba que haya 3 jugadores por equipo, tal vez inecesario o la comprobacion deberia estar en otro lado
+    else:
+        if len(home) != PLAYERS_IN_SIM_HOME or len(away) != PLAYERS_IN_SIM_AWAY:
+                    raise ValueError(f"Cada equipo necesita {PLAYERS_IN_SIM_HOME} titulares en la simulación") #comprueba que haya 3 jugadores por equipo, tal vez inecesario o la comprobacion deberia estar en otro lado
+            
     players = [
         PlayerState(
             id=s.id, team=team, pos=Vec2(),

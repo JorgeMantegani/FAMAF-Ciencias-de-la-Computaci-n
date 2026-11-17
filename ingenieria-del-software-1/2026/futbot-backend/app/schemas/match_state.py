@@ -2,7 +2,17 @@
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, NonNegativeFloat, NonNegativeInt, model_validator
+
+TickPhase = Literal["PLAYING", "HYDRATION", "HALFTIME", "PENALTIES", "FINISHED"]
+PAUSE_PHASES = ("HYDRATION", "HALFTIME")
+PHASE_STATUS = {
+    "PLAYING": "in_progress",
+    "HYDRATION": "paused",
+    "HALFTIME": "paused",
+    "PENALTIES": "paused",
+    "FINISHED": "finished",
+}
 
 
 class StateModel(BaseModel):
@@ -23,6 +33,15 @@ class BallState(Position):
 class Score(StateModel):
     home: int = Field(ge=0, le=32767)
     away: int = Field(ge=0, le=32767)
+
+
+class PenaltySnapshot(StateModel):
+    shooter_id: UUID | None = None
+    goalkeeper_id: UUID | None = None
+    score: Score
+    attempts: Score
+    seconds_remaining: float = Field(ge=0)
+    winner_club_id: UUID | None = None
 
 
 class PlayerTick(StateModel):
@@ -46,11 +65,25 @@ class MatchAction(StateModel):
 
 class MatchTick(StateModel):
     status: Literal["in_progress", "paused", "finished"]
+    phase: TickPhase
+    penalty: PenaltySnapshot | None = None
+    pause_duration: NonNegativeInt | None  # total seconds of the current pause
+    pause_remaining: NonNegativeFloat | None  # seconds left in the pause at this snapshot
     current_time: float = Field(ge=0)
     score: Score
     ball: BallState
     players: list[PlayerTick] = Field(max_length=12)
     actions: list[MatchAction] = Field(default_factory=list, max_length=256)
+
+    @model_validator(mode="after")
+    def require_consistent_phase(self):
+        if PHASE_STATUS[self.phase] != self.status:
+            raise ValueError("La fase no coincide con el estado del partido")
+        in_pause = self.phase in PAUSE_PHASES
+        for value in (self.pause_duration, self.pause_remaining):
+            if (value is not None) != in_pause:
+                raise ValueError("Solo una hidratacion o un entretiempo llevan datos de pausa")
+        return self
 
 
 class ClubState(StateModel):
@@ -71,6 +104,10 @@ class MatchState(StateModel):
     home_club: ClubState
     away_club: ClubState
     status: Literal["in_progress", "paused", "finished"]
+    phase: TickPhase
+    penalty: PenaltySnapshot | None = None
+    pause_duration: NonNegativeInt | None
+    pause_remaining: NonNegativeFloat | None
     score: Score
     result: str
     current_time: float

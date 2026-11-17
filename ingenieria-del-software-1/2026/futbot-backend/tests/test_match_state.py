@@ -58,7 +58,8 @@ def match_scenario(db):
         players[role] = player
     db.commit()
     tick = MatchTick.model_validate({
-        "status": "in_progress", "current_time": 0,
+        "status": "in_progress", "phase": "PLAYING", "pause_duration": None,
+        "pause_remaining": None, "current_time": 0,
         "score": {"home": 0, "away": 0}, "ball": {"x": 5, "y": 3},
         "players": [{"player_id": p.id, "on_field": True, "position": {"x": 0, "y": 0}}
                     for p in players.values()],
@@ -250,10 +251,12 @@ def test_invalid_tick_does_not_change_published_state(db, published_match, chang
 def test_paused_and_finished_states_and_no_reopening(db, published_match):
     scenario = published_match
     data = scenario.tick.model_dump()
-    data.update(status="paused", current_time=100)
+    data.update(status="paused", phase="HYDRATION", pause_duration=15, pause_remaining=10.0,
+                current_time=100)
     publish_match_state(db, scenario.match.id, MatchTick.model_validate(data), expected_revision=1)
     db.commit()
-    data.update(status="finished", current_time=300)
+    data.update(status="finished", phase="FINISHED", pause_duration=None, pause_remaining=None,
+                current_time=300)
     final = publish_match_state(db, scenario.match.id, MatchTick.model_validate(data), expected_revision=2)
     db.commit()
     assert final.remaining_time == 0 and final.status == "finished"
@@ -261,10 +264,99 @@ def test_paused_and_finished_states_and_no_reopening(db, published_match):
         publish_match_state(db, scenario.match.id, scenario.tick, expected_revision=3)
 
 
+def test_penalty_winner_is_persisted_with_final_state(db, published_match):
+    scenario = published_match
+    data = scenario.tick.model_dump()
+    data.update(
+        status="finished",
+        phase="FINISHED",
+        pause_duration=None,
+        pause_remaining=None,
+        current_time=300,
+        penalty={
+            "shooter_id": scenario.home_player.id,
+            "goalkeeper_id": scenario.away_player.id,
+            "score": {"home": 0, "away": 0},
+            "attempts": {"home": 5, "away": 5},
+            "seconds_remaining": 0,
+            "winner_club_id": scenario.away.id,
+        },
+    )
+    final = publish_engine_tick(
+        db,
+        scenario.match.id,
+        MatchTick.model_validate(data),
+        expected_revision=1,
+        penalty_winner_club_id=scenario.away.id,
+    )
+
+    db.refresh(scenario.match)
+    assert scenario.match.status == "finished"
+    assert scenario.match.penalty_winner_club_id == scenario.away.id
+    assert final.phase == "FINISHED"
+    assert str(final.penalty.winner_club_id) == scenario.away.id
+
+
+def test_finishing_league_match_notifies_standings_subscribers(
+    db, match_scenario, state_engine, monkeypatch
+):
+    from app.models.enrollment import Enrollment
+    from app.models.room import ROOM_TYPE_PUBLIC, Room
+    from app.ws.leagues_hub import leagues_hub
+
+    scenario = match_scenario
+    league = Room(
+        type=ROOM_TYPE_PUBLIC,
+        name="Liga en vivo",
+        creator_club_id=scenario.home.id,
+        min_clubs=3,
+        max_clubs=30,
+        match_duration_minutes=5,
+    )
+    db.add(league)
+    db.flush()
+    db.add_all(
+        Enrollment(room_id=league.id, club_id=club.id)
+        for club in (scenario.home, scenario.away)
+    )
+    scenario.match.room_id = league.id
+    db.commit()
+
+    notify = Mock()
+    monkeypatch.setattr(leagues_hub, "notify_standings_updated", notify)
+    publish_engine_state(db, scenario.match.id, state_engine, expected_revision=0)
+    final_tick = scenario.tick.model_copy(
+        update={
+            "status": "finished",
+            "phase": "FINISHED",
+            "current_time": scenario.match.duration_seconds,
+        }
+    )
+    publish_engine_tick(db, scenario.match.id, final_tick, expected_revision=1)
+    notify.assert_called_once_with(league.id, scenario.match.id)
+    notify.assert_called_once_with(league.id, scenario.match.id)
+
+
 def test_rejects_non_finite_coordinates():
     with pytest.raises(ValidationError):
-        MatchTick.model_validate({"status": "in_progress", "current_time": 0,
+        MatchTick.model_validate({"status": "in_progress", "phase": "PLAYING",
+            "pause_duration": None, "pause_remaining": None, "current_time": 0,
             "score": {"home": 0, "away": 0}, "ball": {"x": float("nan"), "y": 0}, "players": []})
+
+
+@pytest.mark.parametrize("status,phase,duration,remaining", [
+    ("in_progress", "PLAYING", 15, None),
+    ("paused", "HYDRATION", None, 15.0),
+    ("paused", "HYDRATION", 15, None),
+    ("in_progress", "PLAYING", None, 5.0),
+    ("paused", "PLAYING", None, None),
+], ids=["duration_outside_pause", "pause_without_duration", "pause_without_remaining",
+        "remaining_outside_pause", "phase_status_mismatch"])
+def test_rejects_inconsistent_phase(match_scenario, status, phase, duration, remaining):
+    data = match_scenario.tick.model_dump()
+    data.update(status=status, phase=phase, pause_duration=duration, pause_remaining=remaining)
+    with pytest.raises(ValidationError):
+        MatchTick.model_validate(data)
 
 
 def test_get_is_only_public_operation(client, published_match):
@@ -337,9 +429,10 @@ def test_mocked_engine_publishes_match_lifecycle(client, db, match_scenario, sta
     snapshots = [
         initial,
         goal,
-        {**goal, "status": "paused", "actions": [{"type": "pause"}]},
+        {**goal, "status": "paused", "phase": "HYDRATION", "pause_duration": 15,
+         "pause_remaining": 10.0, "actions": [{"type": "pause"}]},
         {**goal, "actions": [{"type": "resume"}]},
-        {**goal, "status": "finished", "current_time": 300, "actions": []},
+        {**goal, "status": "finished", "phase": "FINISHED", "current_time": 300, "actions": []},
     ]
     ticks = [MatchTick.model_validate(snapshot) for snapshot in snapshots]
     state_engine.capture_state.side_effect = ticks
@@ -356,6 +449,9 @@ def test_mocked_engine_publishes_match_lifecycle(client, db, match_scenario, sta
         state = states[0]
         assert state["revision"] == revision
         assert state["status"] == tick.status
+        assert state["phase"] == tick.phase
+        assert state["pause_duration"] == tick.pause_duration
+        assert state["pause_remaining"] == tick.pause_remaining
         assert state["score"] == tick.score.model_dump()
         assert state["current_time"] == tick.current_time
         assert state["remaining_time"] == 300 - tick.current_time

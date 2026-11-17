@@ -1,19 +1,25 @@
 import pytest
-from sqlalchemy import Engine, func, inspect, select, text
+from sqlalchemy import Engine, create_engine, func, inspect, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.db.init_db import _leer_comportamiento, cargar_comportamientos_por_defecto
+from app.db.init_db import (
+    _leer_comportamiento,
+    cargar_comportamientos_por_defecto,
+    crear_tablas,
+)
 from app.models.behavior import Behavior
 from app.models.club import Club
 from app.models.player import Player
-from tests.conftest import crear_player
 
 """Tests del schema: tablas, restricciones de integridad y carga inicial."""
 
 TABLAS_ESPERADAS = {
     "users",
+    "password_reset_tokens",
     "auth_sessions",
+    "email_verification_tokens",
+    "verification_rate_limits",
     "clubs",
     "players",
     "behaviors",
@@ -37,6 +43,35 @@ def test_las_claves_foraneas_estan_activadas(engine: Engine) -> None:
     """
     with engine.connect() as conexion:
         assert conexion.execute(text("PRAGMA foreign_keys")).scalar() == 1
+
+
+def test_inicializacion_agrega_columnas_de_penales_a_esquema_existente(tmp_path):
+    engine = create_engine(f"sqlite:///{tmp_path / 'old-schema.db'}")
+    try:
+        with engine.begin() as connection:
+            connection.execute(text(
+                "CREATE TABLE rooms (id VARCHAR(36) PRIMARY KEY)"
+            ))
+            connection.execute(text(
+                "INSERT INTO rooms (id) VALUES ('old-room')"
+            ))
+            connection.execute(text(
+                "CREATE TABLE matches (id VARCHAR(36) PRIMARY KEY)"
+            ))
+
+        crear_tablas(engine)
+        crear_tablas(engine)
+
+        room_columns = {column["name"] for column in inspect(engine).get_columns("rooms")}
+        match_columns = {column["name"] for column in inspect(engine).get_columns("matches")}
+        assert "has_penalty_shootout" in room_columns
+        assert "penalty_winner_club_id" in match_columns
+        with engine.connect() as connection:
+            assert connection.execute(text(
+                "SELECT has_penalty_shootout FROM rooms WHERE id = 'old-room'"
+            )).scalar() in (0, False)
+    finally:
+        engine.dispose()
 
 
 def test_borrar_un_club_borra_sus_jugadores(db: Session, club: Club, crear_player) -> None:

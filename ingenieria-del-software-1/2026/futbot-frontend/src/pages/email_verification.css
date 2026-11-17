@@ -1,0 +1,80 @@
+.email-page {
+  min-height: 100dvh;
+  padding: 24px;
+  background: #0f2217 url('/BackFutBot.png') center / cover;
+  color: #f3ecdd;
+}
+
+.email-page header {
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.email-card {
+  max-width: 540px;
+  margin: 10vh auto 0;
+  padding: clamp(24px, 5vw, 48px);
+  background: #193625;
+  border: 1px solid #41644a;
+  border-radius: 16px;
+  box-shadow: 0 16px 48px #0005;
+}
+
+.email-card h1 {
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+
+.email-card p {
+  margin: 16px 0;
+  line-height: 1.6;
+}
+
+.email-card a {
+  color: #f0a95b;
+}
+
+.email-resend {
+  display: grid;
+  gap: 12px;
+  margin: 24px 0;
+}
+
+.email-resend input {
+  width: 100%;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #72947a;
+  border-radius: 6px;
+  background: #0f2217;
+  color: #fff;
+}
+
+.email-resend button,
+.email-card .email-action {
+  display: inline-block;
+  padding: 12px 18px;
+  border-radius: 6px;
+  background: #f0a95b;
+  color: #132a1d;
+  font-weight: 700;
+  text-align: center;
+}
+
+.email-resend button:disabled {
+  opacity: .6;
+  cursor: wait;
+}
+
+.email-resend [role='alert'],
+.email-card [role='alert'] {
+  color: #ffb8b8;
+}
+
+.email-resend input:focus-visible,
+.email-resend button:focus-visible,
+.email-card a:focus-visible {
+  outline: 2px solid #f0a95b;
+  outline-offset: 4px;
+}

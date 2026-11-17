@@ -12,3 +12,22 @@ class BehaviorRead(BaseModel): # Como lo voy a devolver al front (en route hago 
         populate_by_name=True, 
         from_attributes=True
     )
+class BehaviorCreate(BaseModel): # Como lo voy a recibir del front (en route hago BehaviorCreate)
+    name: str = Field(min_length=1, max_length=50)
+    code: str = Field(min_length=1)
+    
+    model_config = ConfigDict(
+        alias_generator=to_camel, 
+        populate_by_name=True,
+        extra="forbid"
+    )
+
+class BehaviorUpdate(BaseModel): # Como lo voy a recibir del front (en route hago BehaviorUpdate)
+    name: str = Field(min_length=1, max_length=50)
+    code: str = Field(min_length=1)
+    
+    model_config = ConfigDict(
+        alias_generator=to_camel, 
+        populate_by_name=True,
+        extra="forbid"
+    )

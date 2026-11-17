@@ -7,7 +7,8 @@ from app.engine.state import MatchPhase, Team, Vec2
 
 
 def specs(start_id: int) -> list[PlayerSpec]:
-    return [PlayerSpec(start_id + i, 60, 60, 60, 60, 60) for i in range(3)] #crea futbolistas con id consecutivos y stats iguales, para pruebas
+    # crea futbolistas con id consecutivos y stats iguales, para pruebas
+    return [PlayerSpec(f"player-{start_id + i}", 60, 60, 60, 60, 60) for i in range(3)]
 
 
 @pytest.fixture
@@ -71,15 +72,15 @@ def test_wrong_team_size_raises(field):
         create_initial_state(field, specs(1)[:2], specs(10))
         
 def test_valid_spec_sums_300():
-    PlayerSpec(1, 60, 60, 60, 60, 60)
-    PlayerSpec(2, 100, 100, 60, 20, 20)   # extremos válidos
+    PlayerSpec("player-1", 60, 60, 60, 60, 60)
+    PlayerSpec("player-2", 100, 100, 60, 20, 20)   # extremos válidos
 
 
 def test_sum_not_300_raises():
     with pytest.raises(ValueError):
-        PlayerSpec(1, 50, 50, 50, 50, 50)   # suma 250
+        PlayerSpec("player-1", 50, 50, 50, 50, 50)   # suma 250
     with pytest.raises(ValueError):
-        PlayerSpec(1, 70, 70, 70, 70, 70)   # suma 350
+        PlayerSpec("player-1", 70, 70, 70, 70, 70)   # suma 350
 
 
 @pytest.mark.parametrize("bad", [19, 101]) 
@@ -87,4 +88,4 @@ def test_attribute_out_of_range_raises(bad):
     # suma 300 pero un atributo fuera de rango
     rest = (300 - bad) / 4
     with pytest.raises(ValueError):
-        PlayerSpec(1, bad, rest, rest, rest, rest)
+        PlayerSpec("player-1", bad, rest, rest, rest, rest)

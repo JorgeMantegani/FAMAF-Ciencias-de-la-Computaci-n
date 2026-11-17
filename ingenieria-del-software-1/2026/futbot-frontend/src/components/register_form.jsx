@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { registerUser } from '../api/auth';
 import { useNavigate } from 'react-router-dom';
 
@@ -14,7 +14,8 @@ function RegisterForm() {
     avatar: '1',
   });
 
-  const [message, setMessage] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const pending = useRef(false);
   const [error, setError] = useState('');
   const current_errors = validate_form(form);
   const is_form_valid = Object.keys(current_errors).length === 0;
@@ -31,7 +32,9 @@ function RegisterForm() {
 
   async function handleSubmit(event) {
     event.preventDefault();
-    setMessage('');
+    if (pending.current || !is_form_valid) return;
+    pending.current = true;
+    setSubmitting(true);
     setError('');
 
     const payload   = {
@@ -44,23 +47,13 @@ function RegisterForm() {
 
     try {
       await registerUser(payload);
-      setMessage('Usuario registrado correctamente. Redirigiendo...');
-
-      setForm({
-        username: '',
-        email: '',
-        password: '',
-        clubName: '',
-        avatar: '',
-      });
-
-      // Esperamos 2 segundos para que el usuario lea el message y redirigimos a la página de inicio
-      setTimeout(() => {
-        navigate('/login'); 
-      }, 2000);
+      navigate('/check-email', { replace: true, state: { email: form.email } });
 
     } catch (error) {
       setError(error.message);
+    } finally {
+      pending.current = false;
+      setSubmitting(false);
     }
   }
 
@@ -237,21 +230,14 @@ function RegisterForm() {
           )}
           <button 
             type="submit"
-            disabled={!is_form_valid}
+            disabled={!is_form_valid || submitting}
             className={`w-full font-bold py-4 rounded-md transition-colors flex items-center justify-center gap-2 
               ${is_form_valid 
                 ? 'bg-[#f0a95b] hover:bg-[#e0984a] text-black cursor-pointer' 
                 : 'bg-gray-600 text-gray-400 cursor-not-allowed opacity-50'}`}
           >
-            CREAR MI CUENTA <span>→</span>
+            {submitting ? 'Creando cuenta…' : 'CREAR MI CUENTA'} <span>→</span>
           </button>
-          {/* message de éxito */}
-          {message && (
-            <div className="mt-4 p-3 bg-green-900/30 border border-green-800 rounded text-green-400 text-sm font-mono text-center">
-              {message}
-            </div>
-          )}
-
           {/* message de error */}
           {error && (
             <div className="mt-4 p-3 bg-red-900/30 border border-red-800 rounded text-red-400 text-sm font-mono text-center">

@@ -51,3 +51,19 @@ def obtener_funcion_comportamiento(behavior_id: str) -> Callable:
     if funcion is None:
         raise ComportamientoNoEncontrado(behavior_id)
     return funcion
+
+def compile_and_cache_behavior(behavior_id: str, code:str, overwrite: bool = False,) -> callable:
+    """Compila el código de un comportamiento y lo cachea en memoria."""
+    if behavior_id in _cache and not overwrite:
+        return _cache[behavior_id]
+    namespace: dict = {"__builtins__": BUILTINS_RESTRINGIDOS}
+    try:
+        exec(code, namespace)  # noqa: S102 -- codigo propio, no de usuario
+        behavior_function = namespace.get("behavior")
+        if not callable(behavior_function):
+            raise ComportamientoInvalido(behavior_id)
+        _cache[behavior_id] = behavior_function
+        return behavior_function
+    except Exception as e:
+        logger.error("Error al compilar el comportamiento: %s", behavior_id, exc_info=True)
+        raise ComportamientoInvalido(behavior_id)

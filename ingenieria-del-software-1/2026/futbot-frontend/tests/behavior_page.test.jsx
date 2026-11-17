@@ -17,6 +17,7 @@ vi.mock('react-router-dom', async () => {
 
 vi.mock('../src/api/behaviors', () => ({
     get_behaviors: vi.fn(),
+    delete_behavior: vi.fn(),
 }));
 
 vi.mock('../src/auth/session', () => ({
@@ -208,5 +209,79 @@ describe('BehaviorPage', () => {
 
     const modal = screen.getByRole('dialog');
     expect(within(modal).getByText('Sin código')).toBeInTheDocument();
+  });
+
+  it('Debe mostrar el modal de confirmación al hacer clic en eliminar en un comportamiento propio', async () => {
+    const mockBehaviors = [
+      { id: 'b1', name: 'Comportamiento Propio', code: 'pass', isDefault: false },
+    ];
+    vi.mocked(sessionModule.read_session).mockReturnValue({ access_token: 'fake-token' });
+    vi.mocked(apiModule.get_behaviors).mockResolvedValue(mockBehaviors);
+
+    render(<BehaviorPage />);
+    expect(await screen.findByText('Comportamiento Propio')).toBeInTheDocument();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: /eliminar/i }));
+
+    // Verificar que aparece el modal de confirmación
+    const modal = screen.getByRole('dialog');
+    expect(modal).toBeInTheDocument();
+    expect(within(modal).getByText(/¿Estás seguro/i)).toBeInTheDocument();
+    expect(within(modal).getByRole('button', { name: /^eliminar$/i })).toBeInTheDocument();
+  });
+
+  it('Debe eliminar el comportamiento de la lista instantáneamente al confirmar un éxito (200/204)', async () => {
+    const mockBehaviors = [
+      { id: 'b1', name: 'Comportamiento Propio', code: 'pass', isDefault: false },
+    ];
+    vi.mocked(sessionModule.read_session).mockReturnValue({ access_token: 'fake-token' });
+    vi.mocked(apiModule.get_behaviors).mockResolvedValue(mockBehaviors);
+    vi.mocked(apiModule.delete_behavior).mockResolvedValue({});
+
+    render(<BehaviorPage />);
+    expect(await screen.findByText('Comportamiento Propio')).toBeInTheDocument();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: /eliminar/i }));
+
+    const modal = screen.getByRole('dialog');
+    const confirmButton = within(modal).getByRole('button', { name: /^eliminar$/i });
+    await user.click(confirmButton);
+
+    // Verificar llamada a la API
+    expect(apiModule.delete_behavior).toHaveBeenCalledWith('b1');
+
+    // Verificar que desaparece el comportamiento de la interfaz
+    expect(screen.queryByText('Comportamiento Propio')).not.toBeInTheDocument();
+  });
+
+  it('Debe mostrar la notificación de advertencia si la API responde con un error 409 Conflict', async () => {
+    const mockBehaviors = [
+      { id: 'b1', name: 'Comportamiento en uso', code: 'pass', isDefault: false },
+    ];
+    vi.mocked(sessionModule.read_session).mockReturnValue({ access_token: 'fake-token' });
+    vi.mocked(apiModule.get_behaviors).mockResolvedValue(mockBehaviors);
+    
+    // Simular el rechazo de la API con el error 409
+    vi.mocked(apiModule.delete_behavior).mockRejectedValue({ 
+      status: 409, 
+      message: 'No se puede eliminar un comportamiento asignado en alguna plantilla: primero hay que reemplazarlo' 
+    });
+
+    render(<BehaviorPage />);
+    expect(await screen.findByText('Comportamiento en uso')).toBeInTheDocument();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: /eliminar/i }));
+
+    const modal = screen.getByRole('dialog');
+    const confirmButton = within(modal).getByRole('button', { name: /^eliminar$/i });
+    await user.click(confirmButton);
+
+    // Esperar a que aparezca el mensaje de advertencia en el DOM
+    expect(
+      await screen.findByText(/No se puede eliminar un comportamiento asignado en alguna plantilla: primero hay que reemplazarlo/i)
+    ).toBeInTheDocument();
   });
 })

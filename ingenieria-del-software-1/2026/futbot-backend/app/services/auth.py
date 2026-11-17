@@ -17,6 +17,10 @@ class InvalidCredentialsError(Exception):
     pass
 
 
+class EmailNotVerifiedError(Exception):
+    pass
+
+
 class MissingClubError(Exception):
     pass
 
@@ -25,6 +29,8 @@ def login(db: Session, email: str, password: str) -> LoginResponse:
     user = db.scalar(select(User).where(User.email == email))
     if user is None or not verify_password(password, user.password_hash):
         raise InvalidCredentialsError
+    if user.email_verified_at is None:
+        raise EmailNotVerifiedError
     if user.club is None:
         raise MissingClubError
     return start_session(db, user)
@@ -69,6 +75,8 @@ def refresh_session(db: Session, token: str) -> LoginResponse:
     user = db.get(User, session.user_id)
     if user is None:
         raise InvalidCredentialsError
+    if user.email_verified_at is None:
+        raise EmailNotVerifiedError
     if user.club is None:
         raise MissingClubError
     new_token = token_urlsafe(48)

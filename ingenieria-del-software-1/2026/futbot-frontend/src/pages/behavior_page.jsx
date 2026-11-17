@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { read_session } from '../auth/session.js'
-import { get_behaviors } from '../api/behaviors';
+import { get_behaviors, delete_behavior } from '../api/behaviors';
 import BehaviorRow from '../components/behavior_row'
 import BehaviorModal from '../components/behavior_modal'
+import ConfirmModal from '../components/behavior_confirm_modal.jsx'
 
 export default function BehaviorPage() {
     const navigate = useNavigate()
@@ -11,6 +12,12 @@ export default function BehaviorPage() {
     const [behavior_list, set_behavior_list] = useState([])
     const [selected_behavior, set_selected_behavior] = useState(null)
     const [error, set_error] = useState(null)
+
+    // Estados para la funcionalidad de borrado
+    const [behavior_to_delete, set_behavior_to_delete] = useState(null)
+    const [is_deleting, set_is_deleting] = useState(null)
+    const [delete_error, set_delete_error] = useState(null)
+    const [global_alert, set_global_alert] = useState(null)
 
     useEffect(() => {
         
@@ -37,6 +44,29 @@ export default function BehaviorPage() {
         fetch_behaviors()
     }, [navigate])
     
+    const handle_confirm_delete = async () => {
+        if (!behavior_to_delete) return
+
+        set_is_deleting(true)
+        set_delete_error(null)
+
+        try {
+            await delete_behavior(behavior_to_delete.id)
+
+            set_behavior_list(prev => prev.filter(b => b.id !== behavior_to_delete.id))
+            set_behavior_to_delete(null)
+        } catch (err) {
+            console.error('Error al eliminar comportamiento:', err)
+
+            if (err.status === 409 || (err.message && err.message.includes('plantilla'))) {
+                set_delete_error('No se puede eliminar un comportamiento asignado en alguna plantilla: primero hay que reemplazarlo')
+            } else {
+                set_delete_error('Ocurrio un error al intentar eliminar el comportamiento.')
+            }
+        } finally {
+            set_is_deleting(false)
+        }
+    }
 
     return (
         <div className="flex flex-col w-full max-w-5xl mx-auto pt-6 text-white">
@@ -92,7 +122,12 @@ export default function BehaviorPage() {
                                     name={behavior_element.name} 
                                     code={behavior_element.code}
                                     isDefault={behavior_element.isDefault}
-                                    onDetails={() => set_selected_behavior(behavior_element)} 
+                                    onDetails={() => set_selected_behavior(behavior_element)}
+                                    onDelete={() => {
+                                        set_delete_error(null)
+                                        set_behavior_to_delete(behavior_element)
+                                    }}
+                                    onEdit={() => navigate(`/behaviors/edit/${behavior_element.id}`)}
                                 />
                             )
                         })}
@@ -100,6 +135,20 @@ export default function BehaviorPage() {
                         <BehaviorModal
                             behavior={selected_behavior}
                             onClose={() => set_selected_behavior(null)}
+                        />
+
+                        {/* Modal de confirmacion de eliminacion */}
+                        <ConfirmModal
+                            isOpen={!!behavior_to_delete}
+                            title="Eliminar comportamiento"
+                            message={`¿Estás seguro de que deseas eliminar el comportamiento "${behavior_to_delete?.name}"? Esta acción no se puede deshacer.`}
+                            onConfirm={handle_confirm_delete}
+                            onClose={() => {
+                                set_behavior_to_delete(null)
+                                set_delete_error(null)
+                            }}
+                            isDeleting={is_deleting}
+                            error={delete_error}
                         />
                     </div>
                 </div>

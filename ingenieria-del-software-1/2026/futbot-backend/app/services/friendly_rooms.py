@@ -1,5 +1,3 @@
-from collections import Counter
-
 from fastapi import HTTPException, status
 from sqlalchemy import exists, select, update
 from sqlalchemy.exc import IntegrityError
@@ -37,6 +35,7 @@ from app.schemas.friendly_room import (
     FriendlyRoomPlayerRead,
     FriendlyRoomRead,
 )
+from app.services.squad_validator import validate_squad_selection
 
 """Business logic for friendly rooms."""
 
@@ -60,53 +59,14 @@ def _already_started() -> HTTPException:
     )
 
 
-def _invalid_squad() -> HTTPException:
+def _invalid_stored_squad(is_own: bool) -> HTTPException:
+    owner = "Tu plantilla" if is_own else "La plantilla del club rival"
     return _error(
         status.HTTP_400_BAD_REQUEST,
         "INVALID_SQUAD",
-        "Algún club no tiene sus 3 titulares y 3 suplentes con comportamientos válidos",
+        f"{owner} no tiene {STARTER_COUNT} titulares y {SUBSTITUTE_COUNT} suplentes "
+        "con jugadores y comportamientos válidos",
     )
-
-
-def _validate_squads(
-    db: Session,
-    rows: list[tuple[SquadEntry, Player, Behavior]],
-    club_ids: set[str],
-) -> None:
-    """Each club needs 3 starters and 3 substitutes with usable players and behaviors."""
-    roles_per_club: dict[str, Counter] = {club_id: Counter() for club_id in club_ids}
-    player_ids = {player.id for _, player, _ in rows}
-    active_player_ids = set(
-        db.scalars(
-            select(MatchPlayer.player_id)
-            .join(Match, Match.id == MatchPlayer.match_id)
-            .where(
-                MatchPlayer.player_id.in_(player_ids),
-                Match.status.in_(ACTIVE_MATCH_STATES),
-            )
-        )
-    )
-
-    for entry, player, behavior in rows:
-        if player.club_id not in club_ids:
-            print("este es el problema")
-            raise _invalid_squad()
-        if player.deleted_at is not None or player.id in active_player_ids:
-            raise _invalid_squad()
-        # is_playing is a cached flag. Clear stale values left by finished
-        # matches, while active match membership remains authoritative.
-        if player.is_playing:
-            player.is_playing = False
-        if behavior.deleted_at is not None or behavior.club_id not in (
-            None,
-            player.club_id,
-        ):
-            raise _invalid_squad()
-        roles_per_club[player.club_id][entry.role] += 1
-
-    expected = Counter({ROLE_STARTER: STARTER_COUNT, ROLE_SUBSTITUTE: SUBSTITUTE_COUNT})
-    if any(roles != expected for roles in roles_per_club.values()):
-        raise _invalid_squad()
 
 
 def _get_room_for_member(db: Session, room_id: str, club: Club) -> tuple[Room, set[str]]:
@@ -168,7 +128,6 @@ def get_friendly_room(db: Session, room_id: str, club: Club) -> FriendlyRoomRead
     away_ids = club_ids - {room.creator_club_id}
     return FriendlyRoomRead(
         room_id=room.id,
-        room_code=room.code,
         status=to_camel(room.status),
         match_id=match_id,
         home_club=club_read(room.creator_club_id),
@@ -197,7 +156,19 @@ def start_friendly_match(db: Session, room_id: str, club: Club) -> Match:
         )
 
     rows = _load_squads(db, room.id)
-    _validate_squads(db, rows, club_ids)
+    # SquadEntry no guarda club_id: cada entrada pertenece al club de su jugador.
+    for club_id in club_ids:
+        entries = [entry for entry, player, _behavior in rows if player.club_id == club_id]
+        try:
+            validate_squad_selection(
+                db,
+                club_id,
+                [entry for entry in entries if entry.role == ROLE_STARTER],
+                [entry for entry in entries if entry.role == ROLE_SUBSTITUTE],
+            )
+        except HTTPException:
+            # El validador le habla a quien elige; acá la plantilla puede ser del otro club.
+            raise _invalid_stored_squad(is_own=club_id == club.id) from None
 
     home_club_id = room.creator_club_id
     (away_club_id,) = club_ids - {home_club_id}

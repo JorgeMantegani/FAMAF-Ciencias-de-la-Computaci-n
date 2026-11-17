@@ -58,6 +58,8 @@ class TickContext:
         me, team = self._pos[pid], self._team[pid]
         others = [q for q in self._pos
                   if q != pid and (self._team[q] == team) == same_team]
+        if not others:
+            return _c(me)
         best = min(others, key=lambda q: (self._pos[q] - me).length())
         return _c(self._pos[best])
 

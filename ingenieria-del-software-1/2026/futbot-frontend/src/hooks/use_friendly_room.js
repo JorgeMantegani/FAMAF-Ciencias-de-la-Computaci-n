@@ -39,5 +39,10 @@ export function useFriendlyRoom(room_id) {
     return data
   }, [room_id])
 
-  return { room, load_error, is_starting, start_error, start, refresh }
+  // Para que el WebSocket pueda actualizar el estado
+  const update_room = useCallback((new_room) => {
+    set_room(new_room)
+  }, [])
+
+  return { room, load_error, is_starting, start_error, start, refresh, update_room }
 }

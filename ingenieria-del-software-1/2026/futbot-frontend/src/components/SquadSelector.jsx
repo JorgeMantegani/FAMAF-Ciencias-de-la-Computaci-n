@@ -1,6 +1,6 @@
 import './SquadSelector.css'
 
-export default function SquadSelector({ players, behaviors, squad, setSquad}) {
+export default function SquadSelector({ players, behaviors, squad, setSquad, onPreview}) {
 
     // Obtiene los ids de los jugadores elegidos para evitar duplicados
     const getSelectedPlayersIds = () => {
@@ -27,7 +27,9 @@ export default function SquadSelector({ players, behaviors, squad, setSquad}) {
 
     const renderSlot = (type, index, label) => {
         const currentSlot = squad[type][index] || { playerId: '', behaviorId: '' };
-
+        const can_preview =
+            Boolean(currentSlot.playerId) &&
+            Boolean(currentSlot.behaviorId);
         return (
       <div key={`${type}-${index}`} className="slot-card">
         <h6 className="fw-bold">{label} {index + 1}</h6>
@@ -69,6 +71,15 @@ export default function SquadSelector({ players, behaviors, squad, setSquad}) {
               ))}
             </select>
           </div>
+          {/* Botón de vista previa */}
+          <button
+            type="button"
+            className="preview-button"
+            disabled={!can_preview}
+            onClick={() => onPreview(currentSlot)}
+          >
+            Probar comportamiento
+          </button>
         </div>
       </div>
     );

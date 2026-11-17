@@ -15,6 +15,22 @@ from app.models.user import User
 bearer = HTTPBearer(auto_error=False)
 
 
+def get_user_from_token(db: Session, token: str | None) -> User | None:
+    """Devuelve el usuario dueño de un access token vigente, o None si no es válido."""
+    if not isinstance(token, str) or not token:
+        return None
+    try:
+        claims = decode_access_token(token)
+        session = db.get(AuthSession, claims["sid"])
+        user_id = claims["sub"]
+    except (JWTError, ValueError, TypeError, KeyError):
+        return None
+    if (session is None or session.revoked or session.expires_at <= time()
+            or session.user_id != user_id):
+        return None
+    return db.get(User, user_id)
+
+
 def get_current_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer),
     db: Session = Depends(get_db),
@@ -26,15 +42,7 @@ def get_current_user(
     )
     if credentials is None:
         raise unauthorized
-    try:
-        claims = decode_access_token(credentials.credentials)
-    except (JWTError, ValueError, TypeError) as error:
-        raise unauthorized from error
-    session = db.get(AuthSession, claims["sid"])
-    if (session is None or session.revoked or session.expires_at <= time()
-            or session.user_id != claims["sub"]):
-        raise unauthorized
-    user = db.get(User, claims["sub"])
+    user = get_user_from_token(db, credentials.credentials)
     if user is None:
         raise unauthorized
     return user

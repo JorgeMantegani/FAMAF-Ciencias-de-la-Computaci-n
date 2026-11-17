@@ -8,8 +8,7 @@ const session = {
 }
 
 const ROOM_ID = '11111111-1111-4111-8111-111111111111'
-const OTHER_ROOM_ID = '22222222-2222-4222-8222-222222222222'
-const ROOM_CODE = 'ABC123'
+
 
 const players = [
   { id: 'player-ana', name: 'Ana' },
@@ -52,15 +51,26 @@ const selection_of = (names) =>
   }))
 
 const expected_body = {
-  code: ROOM_CODE,
-  starters: selection_of(starters),
-  substitutes: selection_of(substitutes),
+  titulares: selection_of(starters),
+  suplentes: selection_of(substitutes),
 }
 
 const joined = {
   roomId: ROOM_ID,
   status: 'readyToStart',
   awayClub: session.club_id,
+}
+
+const public_rooms = [
+  { roomId: ROOM_ID, status: 'waitingGuest', homeClub: 'club-b', homeClubName: 'Racing del Sur', createdAt: '2026-11-04T18:45:00Z' },
+]
+
+async function mock_public_socket(page, rooms = public_rooms) {
+  await page.routeWebSocket(/\/ws\/friendly-rooms\/public$/, (ws) => {
+    ws.onMessage((raw) => {
+      if (JSON.parse(String(raw)).type === 'auth') ws.send(JSON.stringify({ type: 'rooms', rooms }))
+    })
+  })
 }
 
 test.beforeEach(async ({ page }) => {
@@ -126,60 +136,14 @@ async function seed_session(page) {
   )
 }
 
-async function open_home(page) {
+async function open_join_page(page, club = 'Racing del Sur') {
+  await mock_public_socket(page)
   await seed_session(page)
-
-  await page.goto('/home')
-
-  await expect(
-    page.getByRole('heading', {
-      name: 'Menú principal',
-    }),
-  ).toBeVisible()
-}
-
-async function open_join_modal(page) {
-  await page
-    .getByRole('button', {
-      name: 'Unirse a un amistoso',
-      exact: true,
-    })
-    .click()
-
-  await expect(
-    page
-      .getByRole('dialog')
-      .getByRole('heading', {
-        name: 'Unirse a un amistoso',
-      }),
-  ).toBeVisible()
-}
-
-async function fill_modal(page, room_id, code) {
-  await page.getByLabel('ID de la sala').fill(room_id)
-  await page.getByLabel('Código de la sala').fill(code)
-
-  await page
-    .getByRole('button', {
-      name: 'Continuar',
-      exact: true,
-    })
-    .click()
-}
-
-async function open_join_page(page) {
-  await open_home(page)
-  await open_join_modal(page)
-  await fill_modal(page, ROOM_ID, ROOM_CODE)
-
+  await page.goto('/friendly')
+  await page.getByRole('listitem')
+    .filter({ has: page.getByRole('heading', { name: club, exact: true }) })
+    .getByRole('button', { name: /^Unirse/ }).click()
   await expect(page).toHaveURL('/friendly/join')
-
-  await expect(
-    page.getByRole('heading', {
-      name: 'Unirse a amistoso',
-      exact: true,
-    }),
-  ).toBeVisible()
 }
 
 /*
@@ -285,144 +249,6 @@ async function mock_join(page, status, json) {
 }
 
 // -----------------------------------------------------------------------------
-// Menú / modal
-// -----------------------------------------------------------------------------
-
-test('el menú ofrece unirse a un amistoso y abre la ventana de ID y código', async ({
-  page,
-}) => {
-  await open_home(page)
-  await open_join_modal(page)
-
-  await expect(
-    page.getByLabel('ID de la sala'),
-  ).toBeVisible()
-
-  await expect(
-    page.getByLabel('Código de la sala'),
-  ).toBeVisible()
-})
-
-test('valida el ID y el código antes de continuar', async ({
-  page,
-}) => {
-  await open_home(page)
-  await open_join_modal(page)
-
-  const dialog = page.getByRole('dialog')
-
-  await page
-    .getByRole('button', {
-      name: 'Continuar',
-      exact: true,
-    })
-    .click()
-
-  await expect(
-    dialog.getByRole('alert'),
-  ).toContainText(
-    'El ID de la sala no tiene un formato válido',
-  )
-
-  await page
-    .getByLabel('ID de la sala')
-    .fill(ROOM_ID)
-
-  await page
-    .getByRole('button', {
-      name: 'Continuar',
-      exact: true,
-    })
-    .click()
-
-  await expect(
-    dialog.getByRole('alert'),
-  ).toContainText(
-    'El código debe tener 6 caracteres',
-  )
-
-  await page
-    .getByLabel('Código de la sala')
-    .fill('AB1')
-
-  await page
-    .getByRole('button', {
-      name: 'Continuar',
-      exact: true,
-    })
-    .click()
-
-  await expect(
-    dialog.getByRole('alert'),
-  ).toContainText(
-    'El código debe tener 6 caracteres',
-  )
-
-  await expect(page).toHaveURL('/home')
-})
-
-test('el código se escribe en mayúsculas', async ({
-  page,
-}) => {
-  await open_home(page)
-  await open_join_modal(page)
-
-  await page
-    .getByLabel('Código de la sala')
-    .fill('abc123')
-
-  await expect(
-    page.getByLabel('Código de la sala'),
-  ).toHaveValue('ABC123')
-})
-
-test('Cancelar y Escape cierran la ventana sin navegar y limpian los campos', async ({
-  page,
-}) => {
-  await open_home(page)
-  await open_join_modal(page)
-
-  await page
-    .getByLabel('ID de la sala')
-    .fill(ROOM_ID)
-
-  await page
-    .getByRole('button', {
-      name: 'Cancelar',
-      exact: true,
-    })
-    .click()
-
-  await expect(
-    page.getByRole('dialog'),
-  ).toBeHidden()
-
-  await open_join_modal(page)
-
-  await expect(
-    page.getByLabel('ID de la sala'),
-  ).toHaveValue('')
-
-  await page.keyboard.press('Escape')
-
-  await expect(
-    page.getByRole('dialog'),
-  ).toBeHidden()
-
-  await expect(page).toHaveURL('/home')
-})
-
-test('con ID y código válidos pasa a la selección de jugadores', async ({
-  page,
-}) => {
-  await open_join_page(page)
-
-  await expect(
-    page.getByText(`Sala: ${ROOM_ID}`),
-  ).toBeVisible()
-})
-
-// -----------------------------------------------------------------------------
 // Acceso
 // -----------------------------------------------------------------------------
 
@@ -434,18 +260,19 @@ test('sin sesión, la pantalla de selección lleva al login', async ({
   await expect(page).toHaveURL('/login')
 })
 
-test('con sesión pero sin sala elegida, vuelve al menú', async ({
+test('con sesión pero sin sala elegida, vuelve al listado', async ({
   page,
 }) => {
+  await mock_public_socket(page)
   await seed_session(page)
 
   await page.goto('/friendly/join')
 
-  await expect(page).toHaveURL('/home')
+  await expect(page).toHaveURL('/friendly')
 
   await expect(
     page.getByRole('heading', {
-      name: 'Menú principal',
+      name: 'Amistosos disponibles',
     }),
   ).toBeVisible()
 })
@@ -1126,158 +953,13 @@ test('bloquea Confirmar mientras espera al servidor', async ({
   )
 })
 
-test('código de sala inválido (404) permite ingresar otro sin perder la selección', async ({
+
+test('sala completa (409) informa que no puede unirse', async ({
   page,
 }) => {
-  const requests = []
-
-  await page.route(
-    '**/api/friendly/rooms/*/join',
-    async (route) => {
-      const request = route.request()
-
-      requests.push({
-        url: request.url(),
-        body: request.postDataJSON(),
-      })
-
-      if (
-        request.url().includes(ROOM_ID)
-      ) {
-        await route.fulfill({
-          status: 404,
-          json: {
-            detail:
-              'Sala no encontrada o codigo incorrecto',
-            error_code:
-              'ROOM_NOT_FOUND',
-          },
-        })
-      } else {
-        await route.fulfill({
-          json: {
-            ...joined,
-            roomId: OTHER_ROOM_ID,
-          },
-        })
-      }
-    },
-  )
-
-  await open_join_page(page)
-  await fill_team(page)
-
-  await confirm_button(page).click()
-
-  const notice = page.getByRole('dialog')
-
-  await expect(
-    notice.getByRole('heading', {
-      name: 'No se encontró la sala',
-    }),
-  ).toBeVisible()
-
-  await expect(
-    notice.getByRole('alert'),
-  ).toContainText(
-    'La sala no existe o el ID no es válido.',
-  )
-
-  await notice
-    .getByRole('button', {
-      name: 'Ingresar otra sala',
-    })
-    .click()
-
-  await expect(
-    page
-      .getByRole('dialog')
-      .getByRole('heading', {
-        name: 'Unirse a un amistoso',
-      }),
-  ).toBeVisible()
-
-  await fill_modal(
-    page,
-    OTHER_ROOM_ID,
-    'ZZZ999',
-  )
-
-  await expect(
-    page.getByText(
-      `Sala: ${OTHER_ROOM_ID}`,
-    ),
-  ).toBeVisible()
-
-  // La selección se conserva al cambiar de sala.
-  await expect(
-    player_select(
-      page,
-      'Titular',
-      0,
-    ),
-  ).toHaveValue('player-ana')
-
-  await expect(
-    behavior_select(
-      page,
-      'Titular',
-      0,
-    ),
-  ).toHaveValue('behavior-front')
-
-  await expect(
-    player_select(
-      page,
-      'Suplente',
-      2,
-    ),
-  ).toHaveValue('player-fito')
-
-  await expect(
-    confirm_button(page),
-  ).toBeEnabled()
-
-  await confirm_button(page).click()
-
-  await expect(page).toHaveURL(
-    `/amistosos/${OTHER_ROOM_ID}/sala`,
-  )
-
-  expect(requests).toHaveLength(2)
-
-  expect(
-    requests[1].url,
-  ).toMatch(
-    new RegExp(
-      `/${OTHER_ROOM_ID}/join$`,
-    ),
-  )
-
-  expect(
-    requests[1].body.code,
-  ).toBe('ZZZ999')
-
-  expect(
-    requests[1].body.starters,
-  ).toEqual(
-    selection_of(starters),
-  )
-
-  expect(
-    requests[1].body.substitutes,
-  ).toEqual(
-    selection_of(substitutes),
-  )
-})
-
-test('sala completa (400) informa que no puede unirse', async ({
-  page,
-}) => {
-  await mock_join(page, 400, {
-    detail:
-      'La sala esta completa o fue iniciada.',
-    error_code: 'BAD_REQUEST',
+  await mock_join(page, 409, {
+    detail: 'La sala ya no está disponible.',
+    error_code: 'ROOM_NOT_AVAILABLE',
   })
 
   await open_join_page(page)
@@ -1289,15 +971,13 @@ test('sala completa (400) informa que no puede unirse', async ({
 
   await expect(
     notice.getByRole('heading', {
-      name: 'Sala no disponible',
+      name: 'La sala ya no está disponible',
     }),
   ).toBeVisible()
 
   await expect(
     notice.getByRole('alert'),
-  ).toContainText(
-    'La sala esta completa o fue iniciada.',
-  )
+  ).toContainText('Otro club se unió antes que vos')
 
   await expect(
     notice.getByRole('button', {
@@ -1307,11 +987,11 @@ test('sala completa (400) informa que no puede unirse', async ({
 
   await notice
     .getByRole('button', {
-      name: 'Volver al menú',
+      name: 'Volver al listado',
     })
     .click()
 
-  await expect(page).toHaveURL('/home')
+  await expect(page).toHaveURL('/friendly')
 })
 
 test('selección inválida (400) permite volver a seleccionar desde cero', async ({
@@ -1533,3 +1213,193 @@ test('un 401 al confirmar borra la sesión y lleva al login', async ({
     await stored_session(page),
   ).toBeNull()
 })
+
+// Helpers para test de ws
+
+async function setupSalaEsperandoRival(page) {
+  // Hace el setup inicial y devuelve el socket y el contador
+  let server_socket = null;
+  // Envolvemos el contador en un objeto para pasarlo por referencia
+  const state = { contador_get: 0 };  
+
+  // Intercepta WebSocket
+  await page.routeWebSocket('**/ws/friendly/**', ws => {
+    server_socket = ws;
+  });
+
+  // Intercepta GET de la sala
+  await page.route(`**/api/friendly/rooms/${ROOM_ID}`, async (route) => {
+    if (route.request().method() === 'GET') {
+      state.contador_get++;
+      await route.fulfill({
+        status: 200,
+        json: {
+          roomId: ROOM_ID,
+          status: 'waitingGuest',
+          matchId: null,
+          homeClub: { 
+            clubId: session.club_id, 
+            clubName: 'Club Local', 
+            players: [{
+              playerId: 'home-player-1',
+              name: 'Jugador Local',
+              role: 'starter',
+              behaviorId: 'behavior-1',
+              behaviorName: 'Delantero',
+            }]
+          },
+          awayClub: null,
+        },
+      });
+    } else {
+      route.continue();
+    }
+  });
+
+  const join_requests = await mock_join(page, 200, joined);
+
+  await open_join_page(page);
+  await fill_team(page);
+  await confirm_button(page).click();
+
+  // Espera la conexión
+  await expect.poll(() => server_socket !== null, { timeout: 5000 }).toBeTruthy();
+
+  return { server_socket, state, join_requests };
+}
+
+const json_sala_actualizada = {
+    type: 'room_updated',
+    room: {
+      roomId: ROOM_ID,
+      status: 'readyToStart',
+      matchId: null,
+      homeClub: {
+        clubId: session.club_id,
+        clubName: 'Club Local',
+        players: [
+          {            
+            playerId: 'home-player-1',
+            name: 'Jugador Local',
+            role: 'starter',
+            behaviorId: 'behavior-1',
+            behaviorName: 'Delantero',
+          }
+        ],
+      },
+      awayClub: {
+        clubId: 'away-club-id',
+        clubName: 'Club Visitante',
+        players: [
+          {
+            playerId: 'away-player-1',
+            name: 'Jugador Visitante',
+            role: 'starter',
+            behaviorId: 'behavior-1',
+            behaviorName: 'Defensa',
+          },
+        ],
+      },
+    },
+  }
+
+// Test para ws 
+test('Debe conectar al ws con el ID de la sala y el ID del club correctos', async ({
+  page,
+}) => {
+  let ws_url = '';
+
+  page.on('websocket', (ws) => {
+    if(ws.url().includes('/ws/friendly/')) {
+      ws_url = ws.url();
+    }
+  });
+  const join_requests = await mock_join(page, 200, joined);
+  
+  await open_join_page(page)
+  await fill_team(page)
+  await confirm_button(page).click()
+
+  expect(join_requests).toHaveLength(1);
+  expect(join_requests[0].body).toEqual(expected_body);
+
+  await expect.poll(
+    () => ws_url,
+    {
+      message: 'Esperando que se conecte al ws con la URL correcta',
+      timeout: 5000,
+    }
+  ).toContain(`/ws/friendly/${ROOM_ID}?club_id=${session.club_id}`);
+}
+)
+
+test('Cuando se recibe room_updated, se actualiza el estado de la sala', async ({
+  page,
+}) => {
+  const { server_socket } = await setupSalaEsperandoRival(page)
+  
+  await expect(
+    page.getByRole ('button', { name: 'Esperando rival'})
+  ).toBeVisible();
+
+  server_socket.send(JSON.stringify(json_sala_actualizada)
+  );
+  await expect(page.getByText('Club Visitante')).toBeVisible()
+
+  await expect(
+    page.locator('.fb-room-header .fb-chip')
+  ).toHaveText('Lista para iniciar')
+
+  await expect(
+    page.getByRole('button', { name: 'Iniciar partido' })
+  ).toBeEnabled()
+
+})
+
+test('No realiza petición HTTP extra al recibir la sala completa por WebSocket', async ({ page }) => {
+  const { server_socket, state } = await setupSalaEsperandoRival(page);
+  // Envolvemos el contador en un objeto para pasarlo por referencia
+
+  const llamadas_get_iniciales = state.contador_get;  
+  
+  
+  server_socket.send(JSON.stringify(json_sala_actualizada));
+  await expect(page.getByText(/Lista para iniciar/i)).toBeVisible();
+
+  // Espero antes de evaluar el contador
+  await page.waitForTimeout(500); 
+  
+  expect(state.contador_get).toBe(llamadas_get_iniciales);
+  
+}
+);
+
+test('Si el socket se cierra, la pantalla conserva el último estado y muestra aviso', async ({ page }) => {
+  const { server_socket } = await setupSalaEsperandoRival(page);
+
+  await expect(page.locator('body')).toContainText(/Esperando rival/i);
+
+  // Le corta la conexión desde el servidor (código 1006 es "Cierre anormal")
+  server_socket.close(1006);
+
+  // El estado se conserva (no se fue a blanco ni desapareció)
+  await expect(page.locator('body')).toContainText(/Esperando rival/i);
+
+  // Debe aparecer el mensaje de error
+  const alerta = page.getByText('Se perdió la conexión con el servidor. Intentando reestablecer...'); 
+  await expect(alerta).toBeVisible();
+});
+
+test('Evento con formato inválido, no debe rompe el renderizado ni reemplazar la sala actual', async ({page}) => {
+  const { server_socket } = await setupSalaEsperandoRival(page);
+  
+  await expect(page.locator('body')).toContainText(/Esperando rival/i);
+
+  // Manda mensaje no valido por ws
+  server_socket.send('mensaje no válido')
+
+  await expect(
+    page.getByRole('button', { name: 'Esperando rival' })
+  ).toBeVisible()
+
+});

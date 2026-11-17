@@ -39,6 +39,7 @@ reinstall: ## Borra el .venv y lo crea de cero (al cambiar de sistema o si quedÃ
 	$(VENV_PY) -m pip install -r requirements.txt
 
 dev: ## Levanta la API con recarga automÃ¡tica (PORT=8000 por defecto)
+	$(PYTHON) -c "from pathlib import Path; import shutil; p = Path('.env'); (p.exists() and p.stat().st_size > 0) or shutil.copyfile('.env.example', p)"
 	$(VENV_PY) -m uvicorn app.main:app --reload --port $(PORT)
 
 test: ## Corre los tests con reporte de cobertura en la terminal

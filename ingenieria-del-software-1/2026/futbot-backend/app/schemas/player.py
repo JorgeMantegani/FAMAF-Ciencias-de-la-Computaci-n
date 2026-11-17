@@ -15,6 +15,7 @@ class PlayerCreate(BaseModel):
 class PlayerResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
+    id: str
     name: str
     power: int
     agility: int

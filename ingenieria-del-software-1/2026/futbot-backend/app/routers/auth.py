@@ -1,5 +1,5 @@
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials
 from jose import JWTError
 from sqlalchemy import update
@@ -21,6 +21,17 @@ from app.db.session import get_db
 from app.schemas.auth import UserRead, UserRegister
 from app.services.auth_services import create_user_with_club
 from app.ws.manager import manager
+from app.schemas.auth import (
+    VerifyEmailRequest, ResendVerificationRequest, ForgotPasswordRequest, ResetPasswordRequest,
+)
+from app.services.password_reset import (
+    GENERIC_RESPONSE as PASSWORD_RESET_RESPONSE,
+    process_password_reset,
+    reset_password,
+)
+from app.services.auth import EmailNotVerifiedError
+from app.services.email_sender import EmailSender, get_email_sender
+from app.services.email_verification import issue_verification, verify_email, resend_verification
 
 """router = APIRouter(prefix="/api/auth", tags=["register"])"""
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -32,15 +43,21 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 )
 def register_user(
     data: UserRegister,
+    sender: EmailSender = Depends(get_email_sender),
     db: Session = Depends(get_db),
 ) -> UserRead:
-    return create_user_with_club(db, data)
+    user = create_user_with_club(db, data)
+    issue_verification(db, user, sender)
+    return user
 
 @router.post("/login", response_model=LoginResponse, status_code=status.HTTP_200_OK)
 def login_endpoint(payload: LoginRequest, response: Response, db: Session = Depends(get_db)) -> LoginResponse:
     try:
         response.headers["Cache-Control"] = "no-store"
         return login(db, payload.email, payload.password.get_secret_value())
+    except EmailNotVerifiedError as error:
+        raise HTTPException(403, detail={"detail": "Debés verificar tu correo.",
+                            "error_code": "EMAIL_NOT_VERIFIED"}) from error
     except InvalidCredentialsError as error:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -71,6 +88,9 @@ def refresh_endpoint(payload: RefreshRequest, response: Response,
     response.headers["Cache-Control"] = "no-store"
     try:
         return refresh_session(db, payload.refresh_token.get_secret_value())
+    except EmailNotVerifiedError as error:
+        raise HTTPException(403, detail={"detail": "Debés verificar tu correo.",
+                            "error_code": "EMAIL_NOT_VERIFIED"}) from error
     except InvalidCredentialsError as error:
         raise HTTPException(status_code=401, detail="Sesión inválida o vencida",
                             headers={"WWW-Authenticate": "Bearer"}) from error
@@ -95,3 +115,36 @@ def logout_endpoint(credentials: HTTPAuthorizationCredentials | None = Depends(b
     db.commit()
     manager.revoke_session(claims["sid"])
     return Response(status_code=204)
+
+
+@router.post("/verify-email")
+def verify_email_endpoint(payload: VerifyEmailRequest, db: Session = Depends(get_db)):
+    return verify_email(db, payload.token.get_secret_value())
+
+
+@router.post("/resend-verification")
+def resend_verification_endpoint(payload: ResendVerificationRequest, request: Request,
+                                 db: Session = Depends(get_db),
+                                 sender: EmailSender = Depends(get_email_sender)):
+    ip = request.client.host if request.client else "unknown"
+    return resend_verification(db, str(payload.email), ip, sender)
+
+
+@router.post("/forgot-password")
+def forgot_password_endpoint(
+    payload: ForgotPasswordRequest,
+    request: Request,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    sender: EmailSender = Depends(get_email_sender),
+):
+    ip = request.client.host if request.client else "unknown"
+    background_tasks.add_task(process_password_reset, db.get_bind(), str(payload.email), ip, sender)
+    return PASSWORD_RESET_RESPONSE
+
+
+@router.post("/reset-password")
+def reset_password_endpoint(payload: ResetPasswordRequest, db: Session = Depends(get_db)):
+    return reset_password(
+        db, payload.token.get_secret_value(), payload.new_password.get_secret_value(),
+    )

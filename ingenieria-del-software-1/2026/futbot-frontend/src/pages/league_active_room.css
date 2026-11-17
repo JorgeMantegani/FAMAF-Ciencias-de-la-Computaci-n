@@ -1,0 +1,91 @@
+.lobby-view {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  color: #f3ecdd;
+  padding-bottom: 40px;
+}
+
+.lobby-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #0f381f;
+  padding: 20px 24px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.lobby-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+@media (max-width: 768px) {
+  .lobby-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.match-card, .standings-card, .calendar-card {
+  background: #0f381f;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.standings-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 14px;
+}
+
+.standings-table th, .standings-table td {
+  padding: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.my-club-row {
+  background-color: rgba(191, 149, 72, 0.25) !important;
+  font-weight: bold;
+  border-left: 4px solid #bf9548;
+}
+
+.toast-alert {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: #1e5c2c;
+  color: #c9ffdb;
+  padding: 14px 20px;
+  border-radius: 8px;
+  border: 1px solid #bf9548;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  font-weight: 500;
+  z-index: 1000;
+  animation: fadeInOut 5s ease;
+}
+
+@keyframes fadeInOut {
+  0% { opacity: 0; transform: translateY(10px); }
+  10% { opacity: 1; transform: translateY(0); }
+  90% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(10px); }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #0f381f 25%, #164e2c 50%, #0f381f 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+  border-radius: 6px;
+}
+
+@keyframes loading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}

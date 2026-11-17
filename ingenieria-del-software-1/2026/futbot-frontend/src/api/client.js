@@ -162,7 +162,6 @@ export async function list_behaviors(options = {}) {
 // Convierte el equipo del frontend al formato usado por el endpoint /join.
 export function join_friendly_room({
   room_id,
-  code,
   starters,
   substitutes,
 }) {
@@ -176,9 +175,8 @@ export function join_friendly_room({
     {
       method: 'POST',
       body: JSON.stringify({
-        code,
-        starters: starters.map(to_payload),
-        substitutes: substitutes.map(to_payload),
+        titulares: starters.map(to_payload),
+        suplentes: substitutes.map(to_payload),
       }),
     }
   )
